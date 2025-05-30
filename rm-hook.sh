@@ -63,7 +63,7 @@ rm() {
             return 0
             ;;
         --help)
-            echo "RM Hook - Files backed up to $TRASH_DIR before deletion"
+            echo "rm-hook - Files backed up to $TRASH_DIR before deletion"
             echo "Usage: rm [any rm options] [files...]"
             echo "Special options:"
             echo "  --real-rm     Skip backup, use rm directly"
@@ -167,7 +167,7 @@ uninstall_hook() {
 }
 
 status_hook() {
-  echo "RM Hook Status:"
+  echo "rm-hook status:"
   echo "==============="
   echo "Shell: $SHELL_NAME"
   echo "Config: $SHELL_CONFIG"
@@ -185,7 +185,10 @@ status_hook() {
     print_error "Hook not found in $SHELL_CONFIG"
   fi
 
-  if declare -f rm >/dev/null 2>&1; then
+  if
+    rm --help 2>&1 | grep -q "rm-hook"
+    >/dev/null 2>&1
+  then
     print_info "rm function is currently active"
     echo "Trash directory: /tmp/.rm-trash"
     if [ -d "/tmp/.rm-trash" ]; then
