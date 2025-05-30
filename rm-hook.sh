@@ -44,7 +44,7 @@ mkdir -p "$TRASH_DIR"
 
 rm() {
     case "$1" in
-        --real-rm)
+        --rm)
             shift
             /bin/rm "$@"
             return $?
@@ -66,7 +66,7 @@ rm() {
             echo "rm-hook - Files backed up to $TRASH_DIR before deletion"
             echo "Usage: rm [any rm options] [files...]"
             echo "Special options:"
-            echo "  --real-rm     Skip backup, use rm directly"
+            echo "  --rm          Skip backup, use rm directly"
             echo "  --list-trash  Show trash contents"
             echo "  --empty-trash Empty the trash"
             echo "  --help        Show this help"
@@ -134,7 +134,7 @@ install_hook() {
   echo ""
   print_info "Usage:"
   echo "  rm file.txt           # Backup and delete"
-  echo "  rm --real-rm file.txt # Skip backup, delete directly"
+  echo "  rm --rm file.txt # Skip backup, delete directly"
   echo "  rm --list-trash       # List trash contents"
   echo "  rm --empty-trash      # Empty trash"
   echo "  rm --help             # Show help"

@@ -14,6 +14,12 @@ In other words when you run `rm -rf file directory/`
 
 It will backup to trash first, then delete.
 
+# Really Remove
+
+use `rm --rm`
+
+`rm --rm file directory/`
+
 # Additional features
 
 ```
