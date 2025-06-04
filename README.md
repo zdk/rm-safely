@@ -2,6 +2,10 @@
 
 `rm` safely.
 
+rm-hook is a safety alias to prevent the accidental deletion of important files by wrap around your system /bin/rm
+
+Recovering files is possible because this will instead copy your files and directory to /tmp/.rm-trash/ instead of hard delete.
+
 # Install
 
 `curl -fsSL https://raw.githubusercontent.com/zdk/rm-hook/main/rm-hook.sh | bash -s install`
