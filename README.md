@@ -10,6 +10,11 @@ Recovering files is possible because this will instead copy your files and direc
 
 `curl -fsSL https://raw.githubusercontent.com/zdk/rm-hook/main/rm-hook.sh | bash -s install`
 
+```bash
+brew tap zdk/tools
+brew install rm-hook
+```
+
 # Usage
 
 `rm` to delete things as usual, but safer ＼(◎o◎)／
