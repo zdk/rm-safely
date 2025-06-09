@@ -1,10 +1,12 @@
-# rm-hook
+# rm-safely
 
 `rm` safely.
 
-rm-hook is a safety alias to prevent the accidental deletion of important files by wrap around your system /bin/rm
+rm-safely is a safety alias to prevent the accidental deletion of important files
 
-Recovering files is possible because this will instead copy your files and directory to /tmp/.rm-trash/ instead of hard delete.
+Not altertive tool this is just wrapping around your standard system `/bin/rm` which should already be with you everywhere.
+
+Note that, current implementation saves files in /tmp/.rm-trash which gets cleared on reboot.
 
 # Install
 
