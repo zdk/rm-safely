@@ -6,7 +6,7 @@ rm-safely is a safety alias to prevent the accidental deletion of important file
 
 Not an alternative tool, this is just wrapping around your standard system `/bin/rm`.
 
-Note that, current implementation saves files in /tmp/.rm-trash which gets cleared on reboot.
+Note that, current implementation saves files in ~/.local/share/Trash which persists across reboots.
 
 # Install
 
