@@ -12,9 +12,10 @@ Note that, current implementation saves files in ~/.local/share/Trash which pers
 
 `curl -fsSL https://raw.githubusercontent.com/zdk/rm-safely/main/rm-safely.sh | bash -s install`
 
+Or via homebrew,
+
 ```bash
-brew tap zdk/tools
-brew install rm-safely
+brew install zdk/tools/rm-safely
 ```
 
 # Usage
@@ -23,7 +24,8 @@ brew install rm-safely
 
 In other words when you run `rm -rf file directory/`
 
-It will backup to trash first, then delete.
+You will have files/dir the trash,
+then you can decide to delete or clean them later on.
 
 # Really Remove
 
