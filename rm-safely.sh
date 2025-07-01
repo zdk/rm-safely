@@ -136,7 +136,7 @@ rm() {
         fi
 
         # Create trash info file
-        cat > "$TRASH_INFO/$trash_name.trashinfo" <<TRASH_EOF
+        cat > "$TRASH_INFO/$trash_name.trashinfo" <<'TRASH_EOF'
 [Trash Info]
 Path=$absolute_path
 DeletionDate=$(date -u +%Y-%m-%dT%H:%M:%S)
@@ -274,6 +274,7 @@ install_hook() {
     echo "  rm file.txt           # Backup and delete"
     echo "  rm --rm file.txt      # Skip backup, delete directly"
     echo "  rm --list-trash       # List trash contents"
+    echo "  rm --show-trash-path  # Show trash directory path"
     echo "  rm --empty-trash      # Empty trash"
     echo "  rm --help             # Show help"
     echo ""
