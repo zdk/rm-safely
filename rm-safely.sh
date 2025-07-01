@@ -37,20 +37,15 @@ print_error() {
 create_hook_file() {
     cat >"$HOOK_FILE" <<'EOF'
 #!/bin/bash
-# rm-safely - rm alias that backs up files to a trash directory before deletion
+# rm-safely - rm alias that backups files to a trash directory before deletion
 
 TRASH_DIR="$HOME/.local/share/Trash"
 TRASH_FILES="$TRASH_DIR/files"
 TRASH_INFO="$TRASH_DIR/info"
-mkdir -p "$TRASH_FILES" "$TRASH_INFO"
+
+mkdir -p "$TRASH_DIR" "$TRASH_FILES" "$TRASH_INFO" 2>/dev/null
 
 rm() {
-    # Set trash directory variables within function scope
-    TRASH_DIR="$HOME/.local/share/Trash"
-    TRASH_FILES="$TRASH_DIR/files"
-    TRASH_INFO="$TRASH_DIR/info"
-    mkdir -p "$TRASH_FILES" "$TRASH_INFO"
-    
     case "$1" in
         --rm)
             shift
@@ -64,7 +59,7 @@ rm() {
             ;;
         --list-trash)
             if [ -d "$TRASH_FILES" ] && [ "$(ls -A "$TRASH_FILES" 2>/dev/null)" ]; then
-                echo "Trash contents:"
+                echo "List Trash:"
                 for file in "$TRASH_FILES"/*; do
                     if [ -e "$file" ]; then
                         basename="$(basename "$file")"
@@ -226,6 +221,28 @@ EOF
 
 install_hook() {
     print_info "Installing rm-safely hook for $SHELL_NAME..."
+
+    TRASH_DIR="$HOME/.local/share/Trash"
+    if [ -d "$TRASH_DIR" ]; then
+        print_warning "Trash directory already exists at: $TRASH_DIR"
+
+        DIR_OWNER=$(ls -ld "$TRASH_DIR" 2>/dev/null | awk '{print $3}')
+        CURRENT_USER=$(whoami)
+
+        if [ "$DIR_OWNER" != "$CURRENT_USER" ]; then
+            print_warning "Trash directory is owned by '$DIR_OWNER', not current user '$CURRENT_USER'"
+            print_warning "This may cause permission issues when backing up files"
+        fi
+
+        if [ ! -w "$TRASH_DIR" ]; then
+            print_error "Trash directory exists but is not writable!"
+            print_error "Please fix permissions"
+            return 1
+        fi
+    else
+        print_info "Trash directory will be created at: $TRASH_DIR"
+    fi
+
     create_hook_file
     if ! grep -q "source.*\.rm-safely" "$SHELL_CONFIG" 2>/dev/null; then
         echo "" >>"$SHELL_CONFIG"
@@ -259,8 +276,9 @@ install_hook() {
     echo " "
     print_info " Please add the following line to your bashrc or zshrc file:"
     print_info ' source \"$HOME/.rm-safely\" >/dev/null 2>&1'
-    print_info " For bash, run: ==> echo 'source \"$HOME/.rm-safely\" >/dev/null 2>&1' >> ~/.bashrc"
-    print_info " For zsh, run:  ==> echo 'source \"$HOME/.rm-safely\" >/dev/null 2>&1' >> ~/.zshrc"
+    print_info " Or, run the following commands:"
+    print_info " For bash, ==> echo 'source \"$HOME/.rm-safely\" >/dev/null 2>&1' >> ~/.bashrc"
+    print_info " For zsh,  ==> echo 'source \"$HOME/.rm-safely\" >/dev/null 2>&1' >> ~/.zshrc"
 }
 
 uninstall_hook() {
