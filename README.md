@@ -2,19 +2,19 @@
 
 `rm` safely.
 
-rm-safely is a safety alias to prevent the accidental deletion of important files
+rm-safely is a safety alias to prevent the accidental deletion of important files.
 
-Not altertive tool this is just wrapping around your standard system `/bin/rm` which should already be with you everywhere.
+Not an alternative tool, this is just wrapping around your standard system `/bin/rm`.
 
 Note that, current implementation saves files in /tmp/.rm-trash which gets cleared on reboot.
 
 # Install
 
-`curl -fsSL https://raw.githubusercontent.com/zdk/rm-hook/main/rm-hook.sh | bash -s install`
+`curl -fsSL https://raw.githubusercontent.com/zdk/rm-safely/main/rm-safely.sh | bash -s install`
 
 ```bash
 brew tap zdk/tools
-brew install rm-hook
+brew install rm-safely
 ```
 
 # Usage
@@ -40,4 +40,4 @@ rm --empty-trash   # Empty trash
 
 # Uninstall
 
-`curl -fsSL https://raw.githubusercontent.com/zdk/rm-hook/main/rm-hook.sh | bash -s uninstall`
+`curl -fsSL https://raw.githubusercontent.com/zdk/rm-safely/main/rm-safely.sh | bash -s uninstall`
