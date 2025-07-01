@@ -78,14 +78,19 @@ rm() {
             fi
             return 0
             ;;
+        --show-trash-path)
+            echo "$TRASH_DIR"
+            return 0
+            ;;
         --help)
             echo "rm-safely - Files backed up to \$HOME/.local/share/Trash/files before deletion"
             echo "Usage: rm [any rm options] [files...]"
             echo "Special options:"
-            echo "  --rm          Skip backup, execute real 'rm'"
-            echo "  --list-trash  Show trash contents"
-            echo "  --empty-trash Empty the trash"
-            echo "  --help        Show this help"
+            echo "  --rm              Skip backup, execute real 'rm'"
+            echo "  --list-trash      Show trash contents"
+            echo "  --empty-trash     Empty the trash"
+            echo "  --show-trash-path Display the trash directory path"
+            echo "  --help            Show this help"
             return 0
             ;;
     esac

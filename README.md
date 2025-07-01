@@ -36,8 +36,9 @@ use `rm --rm`
 # Additional features
 
 ```
-rm --list-trash    # Show trash contents
-rm --empty-trash   # Empty trash
+rm --list-trash       # Show trash contents
+rm --empty-trash      # Empty trash
+rm --show-trash-path  # Display the trash directory path
 ```
 
 # Uninstall
