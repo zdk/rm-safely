@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-VERSION="1.0.5"
+VERSION="1.0.7"
 HOOK_FILE="$HOME/.rm-safely"
 
 detect_shell() {
