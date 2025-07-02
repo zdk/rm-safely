@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+VERSION="1.0.5"
 HOOK_FILE="$HOME/.rm-safely"
 
 detect_shell() {
@@ -82,6 +83,10 @@ rm() {
             echo "$TRASH_DIR"
             return 0
             ;;
+        --version)
+            echo "rm-safely version $VERSION"
+            return 0
+            ;;
         --help)
             echo "rm-safely - Files backed up to \$HOME/.local/share/Trash/files before deletion"
             echo "Usage: rm [any rm options] [files...]"
@@ -90,6 +95,7 @@ rm() {
             echo "  --list-trash      Show trash contents"
             echo "  --empty-trash     Empty the trash"
             echo "  --show-trash-path Display the trash directory path"
+            echo "  --version         Show version information"
             echo "  --help            Show this help"
             return 0
             ;;
@@ -350,16 +356,20 @@ uninstall)
 status)
     status_hook
     ;;
+version)
+    echo "rm-safely version $VERSION"
+    ;;
 *)
     echo "rm-safely Installer"
     echo "==================="
     echo ""
-    echo "Usage: $0 {install|uninstall|status}"
+    echo "Usage: $0 {install|uninstall|status|version}"
     echo ""
     echo "Commands:"
     echo "  install    Install the rm-safely hook"
     echo "  uninstall  Remove the rm-safely hook"
     echo "  status     Show installation status"
+    echo "  version    Show version information"
     echo ""
     echo "The hook intercepts 'rm' commands and moves files to ~/.local/share/Trash"
     echo "instead of permanently deleting them."
