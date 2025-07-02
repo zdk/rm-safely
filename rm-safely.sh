@@ -36,17 +36,14 @@ print_error() {
 
 create_hook_file() {
     cat >"$HOOK_FILE" <<'EOF'
-#!/bin/bash
 # rm-safely - rm alias that backups files to a trash directory before deletion
 
-VERSION="1.0.9"
-TRASH_DIR="$HOME/.local/share/Trash"
-TRASH_FILES="$TRASH_DIR/files"
-TRASH_INFO="$TRASH_DIR/info"
-
-mkdir -p "$TRASH_DIR" "$TRASH_FILES" "$TRASH_INFO" 2>/dev/null
+mkdir -p "$TRASH_DIR" "$TRASH_FILES" 2>/dev/null
 
 rm() {
+    VERSION="1.1.1"
+    TRASH_DIR="$HOME/.local/share/Trash"
+    TRASH_FILES="$TRASH_DIR/files"
     case "$1" in
         --rm)
             shift
@@ -54,7 +51,7 @@ rm() {
             return $?
             ;;
         --empty-trash)
-            /bin/rm -rf "$TRASH_FILES"/* "$TRASH_INFO"/*
+            /bin/rm -rf "$TRASH_FILES"/*
             echo "Trash emptied"
             return 0
             ;;
@@ -64,14 +61,7 @@ rm() {
                 for file in "$TRASH_FILES"/*; do
                     if [ -e "$file" ]; then
                         basename="$(basename "$file")"
-                        info_file="$TRASH_INFO/$basename.trashinfo"
-                        if [ -f "$info_file" ]; then
-                            original_path=$(grep "^Path=" "$info_file" 2>/dev/null | cut -d= -f2-)
-                            deletion_date=$(grep "^DeletionDate=" "$info_file" 2>/dev/null | cut -d= -f2-)
-                            echo "  $basename -> $original_path (deleted: $deletion_date)"
-                        else
-                            echo "  $basename (no info available)"
-                        fi
+                        echo "  $basename"
                     fi
                 done
             else
@@ -105,7 +95,7 @@ rm() {
     failed_list=""
     backup_count=0
 
-    if ! [ -w "$TRASH_FILES" ] || ! [ -w "$TRASH_INFO" ]; then
+    if ! [ -w "$TRASH_FILES" ]; then
         echo "ERROR: Cannot write to trash directory: $TRASH_DIR"
         echo "Aborting operation to prevent data loss."
         return 1
@@ -141,13 +131,6 @@ rm() {
             absolute_path="$(pwd)/$arg"
         fi
 
-        # Create trash info file
-        cat > "$TRASH_INFO/$trash_name.trashinfo" <<'TRASH_EOF'
-[Trash Info]
-Path=$absolute_path
-DeletionDate=$(date -u +%Y-%m-%dT%H:%M:%S)
-TRASH_EOF
-
         # Try to backup the file
         if cp -rp "$arg" "$TRASH_FILES/$trash_name" 2>/dev/null; then
             # Verify backup was successful
@@ -161,7 +144,6 @@ TRASH_EOF
                 fi
             else
                 echo "ERROR: Backup verification failed for '$arg'"
-                /bin/rm -f "$TRASH_INFO/$trash_name.trashinfo"
                 failed_list="$failed_list $arg"
             fi
         else
@@ -177,8 +159,6 @@ TRASH_EOF
                     echo "ERROR: Failed to backup '$arg' to trash"
                 fi
             fi
-            # Clean up failed info file
-            /bin/rm -f "$TRASH_INFO/$trash_name.trashinfo"
             failed_list="$failed_list $arg"
         fi
     done
@@ -200,8 +180,7 @@ TRASH_EOF
                     trash_name="${backup_entry#*:}"
                     if [ -e "$TRASH_FILES/$trash_name" ]; then
                         /bin/rm -rf "$TRASH_FILES/$trash_name"
-                        /bin/rm -f "$TRASH_INFO/$trash_name.trashinfo"
-                    fi
+                            fi
                 fi
             done
             unset IFS
@@ -213,7 +192,7 @@ TRASH_EOF
     if [ $backup_count -gt 0 ]; then
         echo "Executing: rm $@"
         /bin/rm "$@"
-        local rm_exit_code=$?
+        rm_exit_code=$?
 
         if [ $rm_exit_code -ne 0 ]; then
             echo "Note: Original rm command failed, but backups are preserved in trash."
