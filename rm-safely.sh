@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-VERSION="1.0.7"
 HOOK_FILE="$HOME/.rm-safely"
 
 detect_shell() {
@@ -40,6 +39,7 @@ create_hook_file() {
 #!/bin/bash
 # rm-safely - rm alias that backups files to a trash directory before deletion
 
+VERSION="1.0.8"
 TRASH_DIR="$HOME/.local/share/Trash"
 TRASH_FILES="$TRASH_DIR/files"
 TRASH_INFO="$TRASH_DIR/info"
