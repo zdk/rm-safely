@@ -39,7 +39,7 @@ create_hook_file() {
 #!/bin/bash
 # rm-safely - rm alias that backups files to a trash directory before deletion
 
-VERSION="1.0.8"
+VERSION="1.0.9"
 TRASH_DIR="$HOME/.local/share/Trash"
 TRASH_FILES="$TRASH_DIR/files"
 TRASH_INFO="$TRASH_DIR/info"
@@ -235,19 +235,14 @@ install_hook() {
 
     TRASH_DIR="$HOME/.local/share/Trash"
     if [ -d "$TRASH_DIR" ]; then
-        print_warning "Trash directory already exists at: $TRASH_DIR"
-
         DIR_OWNER=$(ls -ld "$TRASH_DIR" 2>/dev/null | awk '{print $3}')
         CURRENT_USER=$(whoami)
-
         if [ "$DIR_OWNER" != "$CURRENT_USER" ]; then
             print_warning "Trash directory is owned by '$DIR_OWNER', not current user '$CURRENT_USER'"
-            print_warning "This may cause permission issues when backing up files"
         fi
 
         if [ ! -w "$TRASH_DIR" ]; then
             print_error "Trash directory exists but is not writable!"
-            print_error "Please fix permissions"
             return 1
         fi
     else
@@ -255,6 +250,7 @@ install_hook() {
     fi
 
     create_hook_file
+
     if ! grep -q "source.*\.rm-safely" "$SHELL_CONFIG" 2>/dev/null; then
         echo "" >>"$SHELL_CONFIG"
         echo "# rm-safely - Safe rm command" >>"$SHELL_CONFIG"
@@ -274,23 +270,6 @@ install_hook() {
     else
         print_warning "Restart your terminal or run 'source ~/.bashrc' to activate in new sessions"
     fi
-
-    echo ""
-    print_info "Usage:"
-    echo "  rm file.txt           # Backup and delete"
-    echo "  rm --rm file.txt      # Skip backup, delete directly"
-    echo "  rm --list-trash       # List trash contents"
-    echo "  rm --show-trash-path  # Show trash directory path"
-    echo "  rm --empty-trash      # Empty trash"
-    echo "  rm --help             # Show help"
-    echo ""
-    echo " 'rm' commands and moves files to ~/.local/share/Trash instead of permanently deleting them."
-    echo " "
-    print_info " Please add the following line to your bashrc or zshrc file:"
-    print_info ' source \"$HOME/.rm-safely\" >/dev/null 2>&1'
-    print_info " Or, run the following commands:"
-    print_info " For bash, ==> echo 'source \"$HOME/.rm-safely\" >/dev/null 2>&1' >> ~/.bashrc"
-    print_info " For zsh,  ==> echo 'source \"$HOME/.rm-safely\" >/dev/null 2>&1' >> ~/.zshrc"
 }
 
 uninstall_hook() {
