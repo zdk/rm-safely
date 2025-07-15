@@ -41,7 +41,7 @@ create_hook_file() {
 mkdir -p "$TRASH_DIR" "$TRASH_FILES" "$TRASH_INFO" 2>/dev/null
 
 rm() {
-    VERSION="1.1.1"
+    VERSION="1.2.0"
     TRASH_DIR="$HOME/.local/share/Trash"
     TRASH_FILES="$TRASH_DIR/files"
     TRASH_INFO="$TRASH_DIR/info"

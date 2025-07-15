@@ -10,7 +10,7 @@ Note that, current implementation saves files in ~/.local/share/Trash which pers
 
 # Install
 
-`curl -fsSL https://raw.githubusercontent.com/zdk/rm-safely/main/rm-safely.sh | bash -s install`
+`curl -fsSL https://raw.githubusercontent.com/zdk/rm-safely/main/rm-safely | bash -s install`
 
 Or via homebrew,
 
@@ -43,4 +43,4 @@ rm --show-trash-path  # Display the trash directory path
 
 # Uninstall
 
-`curl -fsSL https://raw.githubusercontent.com/zdk/rm-safely/main/rm-safely.sh | bash -s uninstall`
+`curl -fsSL https://raw.githubusercontent.com/zdk/rm-safely/main/rm-safely | bash -s uninstall`
