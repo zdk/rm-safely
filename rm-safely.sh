@@ -38,12 +38,13 @@ create_hook_file() {
     cat >"$HOOK_FILE" <<'EOF'
 # rm-safely - rm alias that backups files to a trash directory before deletion
 
-mkdir -p "$TRASH_DIR" "$TRASH_FILES" 2>/dev/null
+mkdir -p "$TRASH_DIR" "$TRASH_FILES" "$TRASH_INFO" 2>/dev/null
 
 rm() {
     VERSION="1.1.1"
     TRASH_DIR="$HOME/.local/share/Trash"
     TRASH_FILES="$TRASH_DIR/files"
+    TRASH_INFO="$TRASH_DIR/info"
     case "$1" in
         --rm)
             shift
@@ -51,17 +52,24 @@ rm() {
             return $?
             ;;
         --empty-trash)
-            /bin/rm -rf "$TRASH_FILES"/*
+            /bin/rm -rf "$TRASH_FILES"/* "$TRASH_INFO"/*
             echo "Trash emptied"
             return 0
             ;;
         --list-trash)
             if [ -d "$TRASH_FILES" ] && [ "$(ls -A "$TRASH_FILES" 2>/dev/null)" ]; then
-                echo "List Trash:"
+                echo "Trash Contents:"
+                echo "==============="
                 for file in "$TRASH_FILES"/*; do
                     if [ -e "$file" ]; then
                         basename="$(basename "$file")"
-                        echo "  $basename"
+                        info_file="$TRASH_INFO/${basename}.info"
+                        if [ -f "$info_file" ]; then
+                            original_path=$(cat "$info_file" 2>/dev/null)
+                            printf "%-40s -> %s\n" "$basename" "$original_path"
+                        else
+                            echo "$basename"
+                        fi
                     fi
                 done
             else
@@ -135,6 +143,8 @@ rm() {
         if cp -rp "$arg" "$TRASH_FILES/$trash_name" 2>/dev/null; then
             # Verify backup was successful
             if [ -e "$TRASH_FILES/$trash_name" ]; then
+                # Save original path info
+                echo "$absolute_path" > "$TRASH_INFO/${trash_name}.info"
                 backup_list="$backup_list|$arg:$trash_name"
                 backup_count=$((backup_count + 1))
                 if [ -d "$arg" ]; then
@@ -180,7 +190,8 @@ rm() {
                     trash_name="${backup_entry#*:}"
                     if [ -e "$TRASH_FILES/$trash_name" ]; then
                         /bin/rm -rf "$TRASH_FILES/$trash_name"
-                            fi
+                        /bin/rm -f "$TRASH_INFO/${trash_name}.info"
+                    fi
                 fi
             done
             unset IFS
