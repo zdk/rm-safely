@@ -35,7 +35,7 @@ create_hook_file() {
     cat >"$HOOK_FILE" <<'EOF'
 # rm-safely - rm alias that moves files to a trash directory before deletion
 
-VERSION="1.3.1"
+VERSION="1.3.2"
 TRASH_DIR="$HOME/.local/share/Trash"
 TRASH_FILES="$TRASH_DIR/files"
 TRASH_INFO="$TRASH_DIR/info"
