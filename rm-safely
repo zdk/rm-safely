@@ -36,12 +36,12 @@ print_error() {
 
 create_hook_file() {
     cat >"$HOOK_FILE" <<'EOF'
-# rm-safely - rm alias that backups files to a trash directory before deletion
+# rm-safely - rm alias that moves files to a trash directory before deletion
 
 mkdir -p "$TRASH_DIR" "$TRASH_FILES" "$TRASH_INFO" 2>/dev/null
 
 rm() {
-    VERSION="1.2.0"
+    VERSION="1.3.0"
     TRASH_DIR="$HOME/.local/share/Trash"
     TRASH_FILES="$TRASH_DIR/files"
     TRASH_INFO="$TRASH_DIR/info"
@@ -86,10 +86,10 @@ rm() {
             return 0
             ;;
         --help)
-            echo "rm-safely - Files backed up to \$HOME/.local/share/Trash/files before deletion"
+            echo "rm-safely - Files moved to \$HOME/.local/share/Trash/files before deletion"
             echo "Usage: rm [any rm options] [files...]"
             echo "Special options:"
-            echo "  --rm              Skip backup, execute real 'rm'"
+            echo "  --rm              Skip trash, execute real 'rm'"
             echo "  --list-trash      Show trash contents"
             echo "  --empty-trash     Empty the trash"
             echo "  --show-trash-path Display the trash directory path"
@@ -139,34 +139,32 @@ rm() {
             absolute_path="$(pwd)/$arg"
         fi
 
-        # Try to backup the file
-        if cp -rp "$arg" "$TRASH_FILES/$trash_name" 2>/dev/null; then
-            # Verify backup was successful
-            if [ -e "$TRASH_FILES/$trash_name" ]; then
-                # Save original path info
-                echo "$absolute_path" > "$TRASH_INFO/${trash_name}.info"
-                backup_list="$backup_list|$arg:$trash_name"
-                backup_count=$((backup_count + 1))
-                if [ -d "$arg" ]; then
-                    echo "Backed up directory '$arg' (and all contents) to trash"
-                else
-                    echo "Backed up '$arg' to trash"
-                fi
+        # Try to move the file to trash
+        if mv "$arg" "$TRASH_FILES/$trash_name" 2>/dev/null; then
+            # Save original path info
+            echo "$absolute_path" > "$TRASH_INFO/${trash_name}.info"
+            backup_list="$backup_list|$arg:$trash_name"
+            backup_count=$((backup_count + 1))
+            if [ -d "$TRASH_FILES/$trash_name" ]; then
+                echo "Moved directory '$arg' (and all contents) to trash"
             else
-                echo "ERROR: Backup verification failed for '$arg'"
-                failed_list="$failed_list $arg"
+                echo "Moved '$arg' to trash"
             fi
         else
-            # Backup failed - determine why and clean up
-            if [ ! -r "$arg" ]; then
+            # Move failed - determine why
+            if [ ! -e "$arg" ] && [ ! -L "$arg" ]; then
+                echo "ERROR: File '$arg' no longer exists"
+            elif [ ! -r "$arg" ]; then
                 echo "ERROR: Cannot read '$arg' - permission denied"
+            elif [ ! -w "$(dirname "$TRASH_FILES/$trash_name")" ]; then
+                echo "ERROR: Cannot write to trash directory - permission denied"
             else
                 available_space=$(df "$TRASH_FILES" 2>/dev/null | awk 'NR==2 {print $4}')
                 file_size=$(du -s "$arg" 2>/dev/null | awk '{print $1}')
                 if [ -n "$file_size" ] && [ -n "$available_space" ] && [ "$file_size" -gt "$available_space" ]; then
-                    echo "ERROR: Insufficient disk space to backup '$arg'"
+                    echo "ERROR: Insufficient disk space to move '$arg' to trash"
                 else
-                    echo "ERROR: Failed to backup '$arg' to trash"
+                    echo "ERROR: Failed to move '$arg' to trash"
                 fi
             fi
             failed_list="$failed_list $arg"
@@ -175,21 +173,23 @@ rm() {
 
     if [ -n "$failed_list" ]; then
         echo ""
-        echo "OPERATION ABORTED: Cannot safely delete files due to backup failures:"
+        echo "OPERATION ABORTED: Cannot safely delete files due to move failures:"
         for failed_file in $failed_list; do
             echo "  - $failed_file"
         done
         echo ""
-        echo "Your files remain untouched. Please resolve the backup issues and try again."
-        echo "Use 'rm --rm [files]' to skip backup and delete directly (DANGEROUS)."
+        echo "Your files remain untouched. Please resolve the issues and try again."
+        echo "Use 'rm --rm [files]' to skip trash and delete directly (DANGEROUS)."
 
         if [ -n "$backup_list" ]; then
+            echo "Rolling back successful moves..."
             IFS='|'
             for backup_entry in $backup_list; do
                 if [ -n "$backup_entry" ]; then
+                    original_file="${backup_entry%:*}"
                     trash_name="${backup_entry#*:}"
                     if [ -e "$TRASH_FILES/$trash_name" ]; then
-                        /bin/rm -rf "$TRASH_FILES/$trash_name"
+                        mv "$TRASH_FILES/$trash_name" "$original_file" 2>/dev/null
                         /bin/rm -f "$TRASH_INFO/${trash_name}.info"
                     fi
                 fi
@@ -206,7 +206,7 @@ rm() {
         rm_exit_code=$?
 
         if [ $rm_exit_code -ne 0 ]; then
-            echo "Note: Original rm command failed, but backups are preserved in trash."
+            echo "Note: Original rm command failed, but files are preserved in trash."
         fi
 
         return $rm_exit_code

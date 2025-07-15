@@ -2,13 +2,15 @@
 
 `rm` safely.
 
-rm-safely is a safety alias to prevent the accidental deletion of important files.
+rm-safely is a safety shell alias to prevent the accidental deletion of important files.
 
-Not an alternative tool, this is just wrapping around your standard system `/bin/rm`.
+This is just a handy `rm` wrapping function with `mv` along with option to directly invoke `/bin/rm` with `--rm`.
 
-Note that, current implementation saves files in ~/.local/share/Trash which persists across reboots.
+Note that, current implementation saves files in `~/.local/share/Trash` which persists across reboots.
 
 # Install
+
+Via curl,
 
 `curl -fsSL https://raw.githubusercontent.com/zdk/rm-safely/main/rm-safely | bash -s install`
 
@@ -20,18 +22,20 @@ brew install zdk/tools/rm-safely
 
 # Usage
 
-`rm` to delete things as usual, but safer ＼(◎o◎)／
+Use `rm` command to delete things as usual, but safer ＼(◎o◎)／
 
 In other words when you run `rm -rf file directory/`
 
-You will have files/dir the trash,
+You will have files/dir the trash first,
 then you can decide to delete or clean them later on.
 
 # Really Remove
 
-use `rm --rm`
+If you don't really care to move it to Trash first.
 
-`rm --rm file directory/`
+Use `rm --rm`
+
+e.g. `rm --rm file directory/`
 
 # Additional features
 
