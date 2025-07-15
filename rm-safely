@@ -1,12 +1,11 @@
 #!/usr/bin/env bash
 
-VERSION="1.3.1"
+VERSION="1.3.2"
 HOOK_FILE="$HOME/.rm-safely"
 TRASH_DIR="$HOME/.local/share/Trash"
 TRASH_FILES="$TRASH_DIR/files"
 TRASH_INFO="$TRASH_DIR/info"
 
-# Color codes
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
@@ -92,37 +91,31 @@ Special options:
 HELP
             ;;
         *)
-            # Check if trash directory is writable
             if ! [ -w "$TRASH_FILES" ]; then
-                echo "ERROR: Cannot write to trash directory: $TRASH_DIR"
+                echo "ERROR: Cannot write to: $TRASH_FILES"
                 return 1
             fi
 
-            # Process files
             local failed=0
             for arg in "$@"; do
-                # Skip option arguments
+
                 [[ "$arg" == -* ]] && continue
 
-                # Check if file exists
                 if [ ! -e "$arg" ] && [ ! -L "$arg" ]; then
                     echo "rm: cannot remove '$arg': No such file or directory"
                     failed=1
                     continue
                 fi
 
-                # Generate unique trash name
                 basename=$(basename "$arg")
                 trash_name="${basename}_$(date +%s%N)"
 
-                # Get absolute path
                 if [[ "$arg" = /* ]]; then
                     absolute_path="$arg"
                 else
                     absolute_path="$(pwd)/$arg"
                 fi
 
-                # Move to trash
                 if mv "$arg" "$TRASH_FILES/$trash_name" 2>/dev/null; then
                     echo "$absolute_path" > "$TRASH_INFO/${trash_name}.info"
                     [ -d "$TRASH_FILES/$trash_name" ] && echo "Moved directory '$arg' to trash" || echo "Moved '$arg' to trash"
@@ -132,7 +125,6 @@ HELP
                 fi
             done
 
-            # Execute real rm on remaining args if all moves succeeded
             if [ $failed -eq 0 ]; then
                 /bin/rm "$@" 2>/dev/null || true
             fi
@@ -149,17 +141,8 @@ EOF
 install_hook() {
     detect_shell
     print_info "Installing rm-safely hook..."
-
-    # Check trash directory permissions
-    if [ -d "$TRASH_DIR" ] && [ ! -w "$TRASH_DIR" ]; then
-        print_error "Trash directory exists but is not writable!"
-        return 1
-    fi
-
-    # Create hook file
     create_hook_file
 
-    # Add to shell config if not already present
     if ! grep -q "source.*\.rm-safely" "$SHELL_CONFIG" 2>/dev/null; then
         echo -e "\n# rm-safely - Safe rm command\nsource \"$HOOK_FILE\" >/dev/null 2>&1" >>"$SHELL_CONFIG"
         print_info "Added hook to $SHELL_CONFIG"
@@ -175,10 +158,8 @@ uninstall_hook() {
     detect_shell
     print_info "Uninstalling rm-safely hook..."
 
-    # Remove hook file
     [ -f "$HOOK_FILE" ] && rm "$HOOK_FILE" && print_info "Removed hook file"
 
-    # Remove from shell config
     if [ -f "$SHELL_CONFIG" ]; then
         sed -i.bak '/# rm-safely - Safe rm command/,+1d' "$SHELL_CONFIG"
         rm "${SHELL_CONFIG}.bak" 2>/dev/null
@@ -214,7 +195,6 @@ status_hook() {
     fi
 }
 
-# Main script
 case "${1:-}" in
 install) install_hook ;;
 uninstall) uninstall_hook ;;
