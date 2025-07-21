@@ -2,11 +2,18 @@
 
 `rm` safely.
 
-rm-safely is a safety shell alias to prevent the accidental deletion of important files.
+rm-safely is a safety shell alias to prevent the accidental deletion of important files, especially, default MacOS `rm`
 
-This is just a handy `rm` wrapping function with `mv` along with option to directly invoke `/bin/rm` with `--rm`.
+This is just a handy shell wrapping function along with option to directly invoke `/bin/rm` with `--rm`.
 
-Note that, current implementation saves files in `~/.local/share/Trash` which persists across reboots.
+If you always use `/bin/rm -i`, you might not need this alias, since it will be your best bet.
+
+But, with the alias, it can prevent you in case of autocomplete from shell history that left of with random `rm -rf`
+
+Note that,
+
+- The current implementation saves files in `~/.local/share/Trash` which persists across reboots.
+- Tested on macOS 15.5+
 
 # Demo
 
@@ -37,9 +44,9 @@ then you can decide to delete or clean them later on.
 
 If you don't really care to move it to Trash first.
 
-Use `rm --rm`
+Use `rm --rm`, e.g. `rm --rm file directory/`
 
-e.g. `rm --rm file directory/`
+Or, you can just use `/bin/rm` directly.
 
 # Additional features
 
