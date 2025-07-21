@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-VERSION="1.3.2"
+VERSION="1.4.0"
 HOOK_FILE="$HOME/.rm-safely"
 TRASH_DIR="$HOME/.local/share/Trash"
 TRASH_FILES="$TRASH_DIR/files"
@@ -34,7 +34,7 @@ create_hook_file() {
     cat >"$HOOK_FILE" <<'EOF'
 # rm-safely - rm alias that moves files to a trash directory before deletion
 
-VERSION="1.3.2"
+VERSION="1.4.0"
 TRASH_DIR="$HOME/.local/share/Trash"
 TRASH_FILES="$TRASH_DIR/files"
 TRASH_INFO="$TRASH_DIR/info"
@@ -46,6 +46,32 @@ rm() {
     case "$1" in
         --rm)
             shift
+            local has_r=0
+            local has_f=0
+            for arg in "$@"; do
+                case "$arg" in
+                    -*r*) has_r=1 ;;
+                esac
+                case "$arg" in
+                    -*f*) has_f=1 ;;
+                esac
+            done
+
+            local has_rf=0
+            if [ $has_r -eq 1 ] && [ $has_f -eq 1 ]; then
+                has_rf=1 # Both -r and -f are present
+            fi
+
+            if [ $has_rf -eq 1 ]; then
+                echo "WARNING: Permanently delete with 'rm -rf' (bypass trash)?"
+                echo -n "Type 'yes' to confirm: "
+                read -r response
+                if [ "$response" != "yes" ]; then
+                    echo "Cancelled."
+                    return 1
+                fi
+            fi
+
             /bin/rm "$@"
             ;;
         --empty-trash)
@@ -56,19 +82,81 @@ rm() {
             if [ -d "$TRASH_FILES" ] && [ -n "$(ls -A "$TRASH_FILES" 2>/dev/null)" ]; then
                 echo "Trash Contents:"
                 echo "==============="
+                echo "Hash    | Filename                                 | Original Path"
+                echo "--------|------------------------------------------|--------------"
                 for file in "$TRASH_FILES"/*; do
                     [ -e "$file" ] || continue
                     basename="$(basename "$file")"
                     info_file="$TRASH_INFO/${basename}.info"
+                    # Generate short hash from filename
+                    hash=$(echo -n "$basename" | sha256sum | cut -c1-6)
                     if [ -f "$info_file" ]; then
                         original_path=$(cat "$info_file" 2>/dev/null)
-                        printf "%-40s -> %s\n" "$basename" "$original_path"
+                        printf "%-7s | %-40s | %s\n" "$hash" "$basename" "$original_path"
                     else
-                        echo "$basename"
+                        printf "%-7s | %-40s | %s\n" "$hash" "$basename" "(unknown)"
                     fi
                 done
             else
                 echo "Trash is empty"
+            fi
+            ;;
+        --restore)
+            shift
+            if [ -z "$1" ]; then
+                echo "ERROR: Please provide a hash to restore"
+                echo "Usage: rm --restore <hash>"
+                return 1
+            fi
+
+            local target_hash="$1"
+            local found_file=""
+            local found_basename=""
+
+            for file in "$TRASH_FILES"/*; do
+                [ -e "$file" ] || continue
+                basename="$(basename "$file")"
+                hash=$(echo -n "$basename" | sha256sum | cut -c1-6)
+                if [ "$hash" = "$target_hash" ]; then
+                    found_file="$file"
+                    found_basename="$basename"
+                    break
+                fi
+            done
+
+            if [ -z "$found_file" ]; then
+                echo "ERROR: No file found with hash '$target_hash'"
+                echo "Use 'rm --list-trash' to see available files"
+                return 1
+            fi
+
+            info_file="$TRASH_INFO/${found_basename}.info"
+            if [ ! -f "$info_file" ]; then
+                echo "ERROR: No info file found for hash $target_hash"
+                return 1
+            fi
+
+            original_path=$(cat "$info_file" 2>/dev/null)
+            original_dir=$(dirname "$original_path")
+            original_name=$(basename "$original_path")
+
+            if [ ! -d "$original_dir" ]; then
+                echo "WARNING: Original directory '$original_dir' no longer exists"
+                echo "Restoring to current directory instead"
+                original_dir="."
+            fi
+
+            if [ -e "$original_dir/$original_name" ]; then
+                original_name="${original_name}_restored_$(date +%s)"
+                echo "WARNING: File already exists, restoring as '$original_name'"
+            fi
+
+            if mv "$found_file" "$original_dir/$original_name" 2>/dev/null; then
+                /bin/rm -f "$info_file" 2>/dev/null
+                echo "Restored '$original_name' to '$original_dir/'"
+            else
+                echo "ERROR: Failed to restore file"
+                return 1
             fi
             ;;
         --show-trash-path)
@@ -83,7 +171,8 @@ rm-safely - Files moved to \$HOME/.local/share/Trash/files before deletion
 Usage: rm [options] [files...]
 Special options:
   --rm              Skip trash, execute real 'rm'
-  --list-trash      Show trash contents
+  --list-trash      Show trash contents with hashes
+  --restore <hash>  Restore a file from trash using its hash
   --empty-trash     Empty the trash
   --show-trash-path Display the trash directory path
   --version         Show version information
