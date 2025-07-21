@@ -8,6 +8,10 @@ This is just a handy `rm` wrapping function with `mv` along with option to direc
 
 Note that, current implementation saves files in `~/.local/share/Trash` which persists across reboots.
 
+# Demo
+
+![demo.gif](./docs/demo.gif)
+
 # Install
 
 Via curl,
