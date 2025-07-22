@@ -6,7 +6,7 @@ rm-safely is a safety shell alias to prevent the accidental deletion of importan
 
 This is just a handy shell wrapping function along with option to directly invoke `/bin/rm` with `--rm`.
 
-If you always use `/bin/rm -i`, you might not need this alias, since it will be your best bet.
+If you always use `/bin/rm -i`, you probabaly don't need this alias, since it would already be your best bet.
 
 But, with the alias, it can prevent you in case of autocomplete from shell history that left of with random `rm -rf`
 
