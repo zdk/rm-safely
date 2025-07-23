@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
 
-VERSION="1.4.0"
 HOOK_FILE="$HOME/.rm-safely"
-TRASH_DIR="$HOME/.local/share/Trash"
-TRASH_FILES="$TRASH_DIR/files"
-TRASH_INFO="$TRASH_DIR/info"
 
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -34,7 +30,7 @@ create_hook_file() {
     cat >"$HOOK_FILE" <<'EOF'
 # rm-safely - rm alias that moves files to a trash directory before deletion
 
-VERSION="1.4.0"
+VERSION="1.4.1"
 TRASH_DIR="$HOME/.local/share/Trash"
 TRASH_FILES="$TRASH_DIR/files"
 TRASH_INFO="$TRASH_DIR/info"
@@ -264,7 +260,11 @@ status_hook() {
     echo "rm-safely status:"
     echo "================="
 
-    [ -f "$HOOK_FILE" ] && print_info "Hook file exists" || print_error "Hook file not found"
+    if [ -f "$HOOK_FILE" ]; then
+        print_info "Hook file exists"
+    else
+        print_error "Hook file not found"
+    fi
 
     if grep -q "source.*\.rm-safely" "$SHELL_CONFIG" 2>/dev/null; then
         print_info "Hook is enabled in $SHELL_CONFIG"
