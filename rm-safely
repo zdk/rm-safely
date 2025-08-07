@@ -30,7 +30,7 @@ create_hook_file() {
     cat >"$HOOK_FILE" <<'EOF'
 # rm-safely - rm alias that moves files to a trash directory before deletion
 
-VERSION="1.4.2"
+VERSION="1.4.3"
 
 rm() {
     local TRASH_DIR="${TRASH_DIR:-${HOME}/.local/share/Trash}"
@@ -296,13 +296,11 @@ rm-safely Installer
 Usage: $0 {install|uninstall|status|version}
 
 Commands:
-  install    Install the rm-safely hook
-  uninstall  Remove the rm-safely hook
+  install    Install the rm-safely
+  uninstall  Remove the rm-safely
   status     Show installation status
   version    Show version information
 
-The hook intercepts 'rm' commands and moves files to ~/.local/share/Trash
-instead of permanently deleting them.
 USAGE
     ;;
 esac
