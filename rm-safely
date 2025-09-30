@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+VERSION="1.5.0"
 HOOK_FILE="$HOME/.rm-safely"
 
 GREEN='\033[0;32m'
@@ -30,13 +31,45 @@ create_hook_file() {
     cat >"$HOOK_FILE" <<'EOF'
 # rm-safely - rm alias that moves files to a trash directory before deletion
 
-VERSION="1.4.3"
+VERSION="1.5.0"
+
+get_mount_point() {
+    local file="$1"
+    df "$file" 2>/dev/null | tail -1 | awk '{print $NF}'
+}
+
+get_trash_dir() {
+    local file="$1"
+    local home_mount=$(get_mount_point "$HOME")
+    local file_mount=$(get_mount_point "$file")
+
+    if [ "$home_mount" = "$file_mount" ]; then
+        echo "${HOME}/.local/share/Trash"
+    else
+        echo "${file_mount}/.Trash-$(id -u)"
+    fi
+}
+
+get_all_trash_dirs() {
+    local trash_dirs=()
+
+    if [ -d "${HOME}/.local/share/Trash" ]; then
+        trash_dirs+=("${HOME}/.local/share/Trash")
+    fi
+
+    local uid=$(id -u)
+    for mount in $(df -h | tail -n +2 | awk '{print $NF}' | grep -v "^/$home_mount$"); do
+        if [ -d "${mount}/.Trash-${uid}" ]; then
+            trash_dirs+=("${mount}/.Trash-${uid}")
+        fi
+    done
+
+    printf '%s\n' "${trash_dirs[@]}"
+}
 
 rm() {
-    local TRASH_DIR="${TRASH_DIR:-${HOME}/.local/share/Trash}"
-    local TRASH_FILES="${TRASH_FILES:-${TRASH_DIR}/files}"
-    local TRASH_INFO="${TRASH_INFO:-${TRASH_DIR}/info}"
-    mkdir -p "$TRASH_FILES" "$TRASH_INFO" 2>/dev/null
+    local HOME_TRASH_DIR="${HOME}/.local/share/Trash"
+    mkdir -p "${HOME_TRASH_DIR}/files" "${HOME_TRASH_DIR}/info" 2>/dev/null
 
     case "$1" in
         --rm)
@@ -70,29 +103,49 @@ rm() {
             /bin/rm "$@"
             ;;
         --empty-trash)
-            /bin/rm -rf "$TRASH_FILES"/* "$TRASH_INFO"/*
-            echo "Trash emptied"
+            local found_trash=0
+            while IFS= read -r trash_dir; do
+                if [ -d "$trash_dir/files" ] && [ -n "$(ls -A "$trash_dir/files" 2>/dev/null)" ]; then
+                    /bin/rm -rf "$trash_dir/files"/* "$trash_dir/info"/*
+                    echo "Emptied trash at: $trash_dir"
+                    found_trash=1
+                fi
+            done < <(get_all_trash_dirs)
+
+            if [ $found_trash -eq 0 ]; then
+                echo "All trash directories are empty"
+            fi
             ;;
         --list-trash)
-            if [ -d "$TRASH_FILES" ] && [ -n "$(ls -A "$TRASH_FILES" 2>/dev/null)" ]; then
-                echo "Trash Contents:"
-                echo "==============="
-                echo "Hash    | Filename                                 | Original Path"
-                echo "--------|------------------------------------------|--------------"
-                for file in "$TRASH_FILES"/*; do
-                    [ -e "$file" ] || continue
-                    basename="$(basename "$file")"
-                    info_file="$TRASH_INFO/${basename}.info"
-                    # Generate short hash from filename
-                    hash=$(echo -n "$basename" | sha256sum | cut -c1-6)
-                    if [ -f "$info_file" ]; then
-                        original_path=$(cat "$info_file" 2>/dev/null)
-                        printf "%-7s | %-40s | %s\n" "$hash" "$basename" "$original_path"
-                    else
-                        printf "%-7s | %-40s | %s\n" "$hash" "$basename" "(unknown)"
-                    fi
-                done
-            else
+            local has_files=0
+            echo "Trash Contents:"
+            echo "==============="
+            echo "Hash    | Filename                                 | Original Path"
+            echo "--------|------------------------------------------|--------------"
+
+            while IFS= read -r trash_dir; do
+                local trash_files="$trash_dir/files"
+                local trash_info="$trash_dir/info"
+
+                if [ -d "$trash_files" ] && [ -n "$(ls -A "$trash_files" 2>/dev/null)" ]; then
+                    for file in "$trash_files"/*; do
+                        [ -e "$file" ] || continue
+                        basename="$(basename "$file")"
+                        info_file="$trash_info/${basename}.info"
+                        # Generate short hash from filename
+                        hash=$(echo -n "$basename" | sha256sum | cut -c1-6)
+                        if [ -f "$info_file" ]; then
+                            original_path=$(cat "$info_file" 2>/dev/null)
+                            printf "%-7s | %-40s | %s\n" "$hash" "$basename" "$original_path"
+                        else
+                            printf "%-7s | %-40s | %s\n" "$hash" "$basename" "(unknown)"
+                        fi
+                        has_files=1
+                    done
+                fi
+            done < <(get_all_trash_dirs)
+
+            if [ $has_files -eq 0 ]; then
                 echo "Trash is empty"
             fi
             ;;
@@ -107,17 +160,25 @@ rm() {
             local target_hash="$1"
             local found_file=""
             local found_basename=""
+            local found_trash_dir=""
 
-            for file in "$TRASH_FILES"/*; do
-                [ -e "$file" ] || continue
-                basename="$(basename "$file")"
-                hash=$(echo -n "$basename" | sha256sum | cut -c1-6)
-                if [ "$hash" = "$target_hash" ]; then
-                    found_file="$file"
-                    found_basename="$basename"
-                    break
+            while IFS= read -r trash_dir; do
+                local trash_files="$trash_dir/files"
+
+                if [ -d "$trash_files" ]; then
+                    for file in "$trash_files"/*; do
+                        [ -e "$file" ] || continue
+                        basename="$(basename "$file")"
+                        hash=$(echo -n "$basename" | sha256sum | cut -c1-6)
+                        if [ "$hash" = "$target_hash" ]; then
+                            found_file="$file"
+                            found_basename="$basename"
+                            found_trash_dir="$trash_dir"
+                            break 2
+                        fi
+                    done
                 fi
-            done
+            done < <(get_all_trash_dirs)
 
             if [ -z "$found_file" ]; then
                 echo "ERROR: No file found with hash '$target_hash'"
@@ -125,7 +186,7 @@ rm() {
                 return 1
             fi
 
-            info_file="$TRASH_INFO/${found_basename}.info"
+            info_file="$found_trash_dir/info/${found_basename}.info"
             if [ ! -f "$info_file" ]; then
                 echo "ERROR: No info file found for hash $target_hash"
                 return 1
@@ -155,31 +216,32 @@ rm() {
             fi
             ;;
         --show-trash-path)
-            echo "$TRASH_DIR"
+            echo "Home trash: $HOME_TRASH_DIR"
+            echo "All trash directories:"
+            get_all_trash_dirs
             ;;
         --version)
             echo "rm-safely version $VERSION"
             ;;
         --help)
             cat <<HELP
-rm-safely - Files moved to \$HOME/.local/share/Trash/files before deletion
+rm-safely - Files moved to trash before deletion
 Usage: rm [options] [files...]
+
+Files on the same filesystem as \$HOME go to ~/.local/share/Trash
+Files on other filesystems go to <mountpoint>/.Trash-<uid>
+
 Special options:
   --rm              Skip trash, execute real 'rm'
-  --list-trash      Show trash contents with hashes
+  --list-trash      Show trash contents from all filesystems
   --restore <hash>  Restore a file from trash using its hash
-  --empty-trash     Empty the trash
-  --show-trash-path Display the trash directory path
+  --empty-trash     Empty all trash directories
+  --show-trash-path Display all trash directory paths
   --version         Show version information
   --help            Show this help
 HELP
             ;;
         *)
-            if ! [ -w "$TRASH_FILES" ]; then
-                echo "ERROR: Cannot write to: $TRASH_FILES"
-                return 1
-            fi
-
             local failed=0
             for arg in "$@"; do
 
@@ -191,14 +253,32 @@ HELP
                     continue
                 fi
 
-                basename=$(basename "$arg")
-                trash_name="${basename}_$(date +%s%N)"
-
                 if [[ "$arg" = /* ]]; then
                     absolute_path="$arg"
                 else
                     absolute_path="$(pwd)/$arg"
                 fi
+
+                local TRASH_DIR=$(get_trash_dir "$absolute_path")
+                local TRASH_FILES="${TRASH_DIR}/files"
+                local TRASH_INFO="${TRASH_DIR}/info"
+
+                if ! mkdir -p "$TRASH_FILES" "$TRASH_INFO" 2>/dev/null; then
+                    echo "WARNING: Cannot create trash directory at $TRASH_DIR"
+                    echo "Falling back to home trash..."
+                    TRASH_DIR="$HOME_TRASH_DIR"
+                    TRASH_FILES="${TRASH_DIR}/files"
+                    TRASH_INFO="${TRASH_DIR}/info"
+                fi
+
+                if ! [ -w "$TRASH_FILES" ]; then
+                    echo "ERROR: Cannot write to: $TRASH_FILES"
+                    failed=1
+                    continue
+                fi
+
+                basename=$(basename "$arg")
+                trash_name="${basename}_$(date +%s%N)"
 
                 if mv "$arg" "$TRASH_FILES/$trash_name" 2>/dev/null; then
                     echo "$absolute_path" > "$TRASH_INFO/${trash_name}.info"
@@ -212,13 +292,16 @@ HELP
             if [ $failed -eq 0 ]; then
                 /bin/rm "$@" 2>/dev/null || true
             fi
- 
+
             return $failed
             ;;
     esac
 }
 
 export -f rm
+export -f get_mount_point
+export -f get_trash_dir
+export -f get_all_trash_dirs
 EOF
 }
 
