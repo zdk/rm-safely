@@ -22,8 +22,18 @@ print_error() {
 
 detect_shell() {
     case "$SHELL" in
-    *zsh*) SHELL_CONFIG="$HOME/.zshrc" ;;
-    *) SHELL_CONFIG="$HOME/.bashrc" ;;
+    */zsh)
+        for f in "${ZDOTDIR:-}/.zshrc" "$HOME/.zshrc" \
+            "${XDG_CONFIG_HOME:-$HOME/.config}/zsh/.zshrc"; do
+            [ -f "$f" ] && SHELL_CONFIG="$f" && return
+        done
+        ;;
+    */bash)
+        for f in "$HOME/.bashrc" \
+            "${XDG_CONFIG_HOME:-$HOME/.config}/bash/.bashrc"; do
+            [ -f "$f" ] && SHELL_CONFIG="$f" && return
+        done
+        ;;
     esac
 }
 
@@ -68,6 +78,7 @@ get_all_trash_dirs() {
 }
 
 rm() {
+    setopt local_options null_glob 2>/dev/null || true
     local HOME_TRASH_DIR="${HOME}/.local/share/Trash"
     mkdir -p "${HOME_TRASH_DIR}/files" "${HOME_TRASH_DIR}/info" 2>/dev/null
 
@@ -297,11 +308,6 @@ HELP
             ;;
     esac
 }
-
-export -f rm
-export -f get_mount_point
-export -f get_trash_dir
-export -f get_all_trash_dirs
 EOF
 }
 
@@ -355,14 +361,14 @@ status_hook() {
     fi
 
     if type rm | grep -q "function"; then
-        print_info "rm function is active"
+        print_info "rm function is activated"
         echo "Trash directory: $TRASH_DIR"
         if [ -d "$TRASH_FILES" ]; then
             file_count=$(find "$TRASH_FILES" -type f 2>/dev/null | wc -l)
             echo "Files in trash: $file_count"
         fi
     else
-        print_warning "rm function is not active"
+        print_warning "rm function is not activated"
     fi
 }
 
