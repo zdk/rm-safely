@@ -10,10 +10,12 @@ If you always use `/bin/rm -i`, you probabaly don't need this alias, since it wo
 
 But, with the alias, it can prevent you in case of autocomplete from shell history that left of with random `rm -rf`
 
-Note that,
+Notes,
 
-- The current implementation saves files in `~/.local/share/Trash` which persists across reboots.
+- Written in shell script, no dependencies.
+- Saves files in `~/.local/share/Trash` and mounted volume on in `/.Trash-$(id-u)` which persists across reboots.
 - Tested on macOS 15.5+
+- Tested on zsh
 
 # Demo
 
@@ -59,3 +61,12 @@ rm --show-trash-path  # Display the trash directory path
 # Uninstall
 
 `curl -fsSL https://raw.githubusercontent.com/zdk/rm-safely/main/rm-safely | bash -s uninstall`
+
+# Notes
+
+Main goal of rm-safely to write in a pure shell script.
+
+Alternative,
+
+- https://github.com/MilesCranmer/rip2 (rust)
+- https://github.com/Byron/trash-rs (rust)
