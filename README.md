@@ -10,7 +10,7 @@ If you always use `/bin/rm -i`, you probabaly don't need this alias, since it wo
 
 But, with the alias, it can prevent you in case of autocomplete from shell history that left of with random `rm -rf`
 
-_Notes_,
+_Keys_,
 
 - Written in shell script, no dependencies.
 - Saves files in `~/.local/share/Trash` and mounted volume on in `/.Trash-$(id-u)` which persists across reboots.
