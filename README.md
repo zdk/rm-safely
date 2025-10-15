@@ -55,9 +55,12 @@ Or, you can just use `/bin/rm` directly.
 # Additional features
 
 ```
-rm --list-trash       # Show trash contents
-rm --empty-trash      # Empty trash
-rm --show-trash-path  # Display the trash directory path
+rm --rm              Skip trash, execute real 'rm'
+rm --list-trash      Show trash contents from all filesystems
+rm --restore <hash>  Restore a file from trash using its hash
+rm --undo            Restore the last deleted files
+rm --empty-trash     Empty all trash directories
+rm --show-trash-path Display all trash directory paths
 ```
 
 # Uninstall
