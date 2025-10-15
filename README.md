@@ -13,9 +13,11 @@ But, with the alias, it can prevent you in case of autocomplete from shell histo
 _Keys_,
 
 - Written in shell script, no dependencies.
-- Saves files in `~/.local/share/Trash` and mounted volume on in `/.Trash-$(id-u)` which persists across reboots.
-- Tested on macOS 15.5+
-- Tested on zsh
+- Files save in `~/.local/share/Trash` and mounted volume files save in `/.Trash-$(id-u)` - they persist across reboots.
+- Tested on zsh.
+- Tested on:
+  - macOS 15.5+
+  - Linux arch-linux 6.17.1-2-cachyos.
 
 # Demo
 
@@ -23,11 +25,11 @@ _Keys_,
 
 # Install
 
-Via curl,
+Via curl:
 
 `curl -fsSL https://raw.githubusercontent.com/zdk/rm-safely/main/rm-safely | bash -s install`
 
-Or via homebrew,
+Via homebrew:
 
 ```bash
 brew install zdk/tools/rm-safely
