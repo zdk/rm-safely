@@ -41,7 +41,7 @@ create_hook_file() {
     cat >"$HOOK_FILE" <<'EOF'
 # rm-safely - rm alias that moves files to a trash directory before deletion
 
-VERSION="1.5.0"
+VERSION=__VERSION_PLACEHOLDER__
 UNDO_STACK="$HOME/.rm-safely-undo-stack"
 UNDO_LIMIT=100
 
@@ -318,7 +318,7 @@ rm() {
             get_all_trash_dirs
             ;;
         --version)
-            echo "rm-safely version $VERSION"
+            echo "rm-safely version: $VERSION"
             ;;
         --help)
             cat <<HELP
@@ -397,6 +397,7 @@ HELP
     esac
 }
 EOF
+    sed -i "s/__VERSION_PLACEHOLDER__/\"$VERSION\"/" "$HOOK_FILE"
 }
 
 install_hook() {
