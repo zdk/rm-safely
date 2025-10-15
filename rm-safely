@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-VERSION="1.5.0"
+VERSION="1.6.0"
 HOOK_FILE="$HOME/.rm-safely"
 
 GREEN='\033[0;32m'
@@ -41,7 +41,9 @@ create_hook_file() {
     cat >"$HOOK_FILE" <<'EOF'
 # rm-safely - rm alias that moves files to a trash directory before deletion
 
-VERSION="1.5.0"
+VERSION=__VERSION_PLACEHOLDER__
+UNDO_STACK="$HOME/.rm-safely-undo-stack"
+UNDO_LIMIT=100
 
 get_mount_point() {
     local file="$1"
@@ -75,6 +77,43 @@ get_all_trash_dirs() {
     done
 
     printf '%s\n' "${trash_dirs[@]}"
+}
+
+add_to_undo_stack() {
+    local trash_name="$1"
+    local trash_dir="$2"
+    echo "${trash_name}|${trash_dir}" >> "$UNDO_STACK"
+
+    if [ -f "$UNDO_STACK" ]; then
+        local line_count=$(wc -l < "$UNDO_STACK")
+        if [ "$line_count" -gt "$UNDO_LIMIT" ]; then
+            local lines_to_keep=$((line_count - UNDO_LIMIT))
+            tail -n "$UNDO_LIMIT" "$UNDO_STACK" > "${UNDO_STACK}.tmp"
+            mv "${UNDO_STACK}.tmp" "$UNDO_STACK"
+        fi
+    fi
+}
+
+pop_from_undo_stack() {
+    if [ ! -f "$UNDO_STACK" ] || [ ! -s "$UNDO_STACK" ]; then
+        return 1
+    fi
+
+    local last_entry=$(tail -n 1 "$UNDO_STACK")
+    if [ -z "$last_entry" ]; then
+        return 1
+    fi
+
+    case "$last_entry" in
+        *\|*) ;;  # Contains pipe, valid
+        *) return 1 ;;  # No pipe, invalid
+    esac
+
+    sed -i.bak '$ d' "$UNDO_STACK"
+    /bin/rm -f "${UNDO_STACK}.bak"
+
+    echo "$last_entry"
+    return 0
 }
 
 rm() {
@@ -160,6 +199,53 @@ rm() {
                 echo "Trash is empty"
             fi
             ;;
+        --undo)
+            local entry
+            entry=$(pop_from_undo_stack)
+            if [ $? -ne 0 ]; then
+                echo "ERROR: Nothing to undo (undo stack is empty)"
+                return 1
+            fi
+
+            local trash_name="${entry%|*}"
+            local trash_dir="${entry#*|}"
+            local trash_file="$trash_dir/files/$trash_name"
+            local info_file="$trash_dir/info/${trash_name}.info"
+
+            if [ ! -e "$trash_file" ]; then
+                echo "ERROR: Trashed file no longer exists: $trash_file"
+                return 1
+            fi
+
+            if [ ! -f "$info_file" ]; then
+                echo "ERROR: No info file found for $trash_name"
+                return 1
+            fi
+
+            local original_path=$(cat "$info_file" 2>/dev/null)
+            local original_dir=$(dirname "$original_path")
+            local original_name=$(basename "$original_path")
+
+            if [ ! -d "$original_dir" ]; then
+                echo "WARNING: Original directory '$original_dir' no longer exists"
+                echo "Restoring to current directory instead"
+                original_dir="."
+            fi
+
+            if [ -e "$original_dir/$original_name" ]; then
+                original_name="${original_name}_restored_$(date +%s)"
+                echo "WARNING: File already exists, restoring as '$original_name'"
+            fi
+
+            if mv "$trash_file" "$original_dir/$original_name" 2>/dev/null; then
+                /bin/rm -f "$info_file" 2>/dev/null
+                echo "Restored '$original_name' to '$original_dir/'"
+            else
+                echo "ERROR: Failed to restore file"
+                echo "${trash_name}|${trash_dir}" >> "$UNDO_STACK"
+                return 1
+            fi
+            ;;
         --restore)
             shift
             if [ -z "$1" ]; then
@@ -232,7 +318,7 @@ rm() {
             get_all_trash_dirs
             ;;
         --version)
-            echo "rm-safely version $VERSION"
+            echo "rm-safely version: $VERSION"
             ;;
         --help)
             cat <<HELP
@@ -246,6 +332,7 @@ Special options:
   --rm              Skip trash, execute real 'rm'
   --list-trash      Show trash contents from all filesystems
   --restore <hash>  Restore a file from trash using its hash
+  --undo            Restore the last deleted files
   --empty-trash     Empty all trash directories
   --show-trash-path Display all trash directory paths
   --version         Show version information
@@ -293,6 +380,7 @@ HELP
 
                 if mv "$arg" "$TRASH_FILES/$trash_name" 2>/dev/null; then
                     echo "$absolute_path" > "$TRASH_INFO/${trash_name}.info"
+                    add_to_undo_stack "$trash_name" "$TRASH_DIR"
                     [ -d "$TRASH_FILES/$trash_name" ] && echo "Moved directory '$arg' to trash" || echo "Moved '$arg' to trash"
                 else
                     echo "ERROR: Failed to move '$arg' to trash"
@@ -309,6 +397,7 @@ HELP
     esac
 }
 EOF
+    sed -i "s/__VERSION_PLACEHOLDER__/\"$VERSION\"/" "$HOOK_FILE"
 }
 
 install_hook() {
