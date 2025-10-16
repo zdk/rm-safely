@@ -6,7 +6,7 @@ rm-safely is a safety shell alias to prevent the accidental deletion of importan
 
 This is just a handy shell wrapping function along with option to directly invoke `/bin/rm` with `--rm`.
 
-If you always use `/bin/rm -i`, you probabaly don't need this alias, since it would already be your best bet.
+If you always use `/bin/rm -i` or alias it already, you will probably be fine.
 
 But, with the alias, it can prevent you in case of autocomplete from shell history that left of with random `rm -rf`
 
@@ -67,11 +67,16 @@ rm --show-trash-path Display all trash directory paths
 
 `curl -fsSL https://raw.githubusercontent.com/zdk/rm-safely/main/rm-safely | bash -s uninstall`
 
+# Reminder
+
+Like any other aliases in Unix, _the rm-safely alias is installed in current user only_
+So, please use `sudo -s` as a habit to keep your current user alias available in root user.
+Otherwise, chance you will bypass this alias and execute `/bin/rm` as your own risk.
+
 # Notes
 
-Main goal of rm-safely is to write it in a pure shell script.
+- Main goal of rm-safely is to write it in a pure shell script.
 
-Alternative,
-
-- https://github.com/MilesCranmer/rip2 (rust)
-- https://github.com/Byron/trash-rs (rust)
+- Alternative tools:
+  - https://github.com/MilesCranmer/rip2 (rust)
+  - https://github.com/Byron/trash-rs (rust)
