@@ -8,7 +8,7 @@ This is just a handy shell wrapping function along with option to directly invok
 
 If you always use `/bin/rm -i` or alias it already, you will probably be fine.
 
-But, with the alias, it can prevent you in case of autocomplete from shell history that left of with random `rm -rf`
+But, with the alias, it can prevent you in case of autocomplete from shell history that left of with unintended `rm -rf`
 
 _Keys_,
 
@@ -67,16 +67,20 @@ rm --show-trash-path Display all trash directory paths
 
 `curl -fsSL https://raw.githubusercontent.com/zdk/rm-safely/main/rm-safely | bash -s uninstall`
 
-# Reminder
+# Appendix
 
-Like any other aliases in Unix, _the rm-safely alias is installed in current user only_
-So, please use `sudo -s` as a habit to keep your current user alias available in root user.
-Otherwise, chance you will bypass this alias and execute `/bin/rm` as your own risk.
+> [!IMPORTANT]
+>
+> In case of switching to root user,
+>
+> 1. Please keep in mind that _the rm-safely alias is installed in current user only_.
+> 2. Always use `sudo -s` to keep current shell alias to root prompt, then run `rm` in the next step.
+>
+> Otherwise, chance you will bypass this alias and execute standard `/bin/rm` as your own risk.
 
-# Notes
-
-- Main goal of rm-safely is to write it in a pure shell script.
-
-- Alternative tools:
-  - https://github.com/MilesCranmer/rip2 (rust)
-  - https://github.com/Byron/trash-rs (rust)
+> [!NOTE]
+>
+> - Main goal of rm-safely is to write it in a pure shell script.
+> - Alternative tools:
+>   - https://github.com/MilesCranmer/rip2 (rust)
+>   - https://github.com/Byron/trash-rs (rust)
