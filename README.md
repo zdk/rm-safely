@@ -1,5 +1,7 @@
 # rm-safely
 
+[![ShellCheck](https://github.com/zdk/rm-safely/actions/workflows/shellcheck.yml/badge.svg)](https://github.com/zdk/rm-safely/actions/workflows/shellcheck.yml)
+
 `rm` safely.
 
 rm-safely is a safety shell alias to prevent the accidental deletion of important files, especially, default MacOS `rm`

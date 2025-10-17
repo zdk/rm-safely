@@ -1,0 +1,29 @@
+name: ShellCheck
+
+on:
+  push:
+    branches: [ main, chore/add-badge ]
+    paths:
+      - '**.sh'
+      - 'rm-safely'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - '**.sh'
+      - 'rm-safely'
+
+jobs:
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+          severity: warning
+          format: gcc
+          scandir: '.'
+          ignore_paths: '.git .github'
