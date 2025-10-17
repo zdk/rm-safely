@@ -333,7 +333,7 @@ Files on the same filesystem as \$HOME go to ~/.local/share/Trash
 Files on other filesystems go to <mountpoint>/.Trash-<uid>
 
 Options:
-  --rm                      Skip trash, execute real 'rm'
+  --rm                      Skip trash!, really execute 'rm'
   --list-trash, -l          Show trash contents from all filesystems
   --restore <hash>, -s      Restore a file from trash using its hash
   --undo, -u                Restore the last deleted files
