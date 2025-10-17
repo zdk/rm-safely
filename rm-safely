@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-VERSION="1.6.0"
+VERSION="1.7.0"
 HOOK_FILE="$HOME/.rm-safely"
 
 GREEN='\033[0;32m'
