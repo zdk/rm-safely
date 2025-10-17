@@ -49,7 +49,7 @@ then you can decide to delete or clean them later on.
 # Additional features
 
 ```
-rm -rm                      Skip trash!, really execute rm
+rm -rm                      Skip trash!, really execute 'rm'
 rm -list-trash, -l          Show trash contents from all filesystems
 rm -restore <hash>, -s      Restore a file from trash using its hash
 rm -undo, -u                Restore the last deleted files
