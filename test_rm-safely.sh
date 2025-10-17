@@ -1,4 +1,4 @@
-#!/usr/bin/env zsh
+#!/usr/bin/env bash
 
 set -e
 
@@ -29,7 +29,7 @@ bash "$OLDPWD/rm-safely" install >/dev/null 2>&1 || true
 print_pass "Installation complete"
 
 print_header "Testing in bash"
-bash <<'BASH_TEST'
+if bash <<'BASH_TEST'; then
 # shellcheck source=/dev/null
 source "$HOME/.rm-safely"
 
@@ -61,8 +61,6 @@ else
     exit 1
 fi
 BASH_TEST
-
-if [ $? -eq 0 ]; then
     print_pass "All bash tests passed"
 else
     print_fail "Bash tests failed"
@@ -70,7 +68,7 @@ fi
 
 if command -v zsh >/dev/null 2>&1; then
     print_header "Testing in zsh"
-    zsh <<'ZSH_TEST'
+    if zsh <<'ZSH_TEST'; then
 source "$HOME/.rm-safely"
 
 # Test basic functionality
@@ -101,8 +99,6 @@ else
     exit 1
 fi
 ZSH_TEST
-
-    if [ $? -eq 0 ]; then
         print_pass "All zsh tests passed"
     else
         print_fail "Zsh tests failed"

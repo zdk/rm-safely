@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-VERSION="1.6.0"
+VERSION="1.7.0"
 HOOK_FILE="$HOME/.rm-safely"
 
 GREEN='\033[0;32m'
@@ -166,7 +166,7 @@ rm() {
                 echo "All trash directories are empty"
             fi
             ;;
-        --list-trash)
+        --list-trash|-l)
             local has_files=0
             echo "Trash Contents:"
             echo "==============="
@@ -199,7 +199,7 @@ rm() {
                 echo "Trash is empty"
             fi
             ;;
-        --undo)
+        --undo|-u)
             local entry
             entry=$(pop_from_undo_stack)
             if [ $? -ne 0 ]; then
@@ -246,7 +246,7 @@ rm() {
                 return 1
             fi
             ;;
-        --restore)
+        --restore|-s)
             shift
             if [ -z "$1" ]; then
                 echo "ERROR: Please provide a hash to restore"
@@ -312,7 +312,7 @@ rm() {
                 return 1
             fi
             ;;
-        --show-trash-path)
+        --show-trash-path|-p)
             echo "Home trash: $HOME_TRASH_DIR"
             echo "All trash directories:"
             get_all_trash_dirs
@@ -328,15 +328,15 @@ Usage: rm [options] [files...]
 Files on the same filesystem as \$HOME go to ~/.local/share/Trash
 Files on other filesystems go to <mountpoint>/.Trash-<uid>
 
-Special options:
-  --rm              Skip trash, execute real 'rm'
-  --list-trash      Show trash contents from all filesystems
-  --restore <hash>  Restore a file from trash using its hash
-  --undo            Restore the last deleted files
-  --empty-trash     Empty all trash directories
-  --show-trash-path Display all trash directory paths
-  --version         Show version information
-  --help            Show this help
+Options:
+  --rm                      Skip trash, execute real 'rm'
+  --list-trash, -l          Show trash contents from all filesystems
+  --restore <hash>, -s      Restore a file from trash using its hash
+  --undo, -u                Restore the last deleted files
+  --empty-trash             Empty all trash directories
+  --show-trash-path, -p     Display all trash directory paths
+  --version                 Show version information
+  --help                    Show this help
 HELP
             ;;
         *)

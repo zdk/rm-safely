@@ -44,14 +44,6 @@ In other words when you run `rm -rf file directory/`
 You will have files/dir the trash first,
 then you can decide to delete or clean them later on.
 
-# Really Remove
-
-If you don't really care to move it to Trash first.
-
-Use `rm --rm`, e.g. `rm --rm file directory/`
-
-Or, you can just use `/bin/rm` directly.
-
 # Additional features
 
 ```
@@ -63,24 +55,51 @@ rm --empty-trash     Empty all trash directories
 rm --show-trash-path Display all trash directory paths
 ```
 
+# Really Remove
+
+If you don't really care to move it to Trash first.
+
+rm-safely provide bypass to your OS rm via `--rm` option.
+
+That means, use `rm --rm`
+
+For examples:
+
+- remove files and directy with OS rm.
+
+`rm --rm file directory/`
+
+- see the OS rm --help
+
+```rm --rm --help
+/bin/rm: illegal option -- -
+usage: rm [-f | -i] [-dIPRrvWx] file ...
+       unlink [--] file
+```
+
+`--rm` is nothing special other than execute `/bin/rm` from current shell.
+
+Or, you could just `/bin/rm` directly.
+
 # Uninstall
 
 `curl -fsSL https://raw.githubusercontent.com/zdk/rm-safely/main/rm-safely | bash -s uninstall`
 
-# Appendix
+# Notes
 
-> [!IMPORTANT]
->
-> In case of switching to root user,
->
-> 1. Please keep in mind that _the rm-safely alias is installed in current user only_.
-> 2. Always use `sudo -s` to keep current shell alias to root prompt, then run `rm` in the next step.
->
-> Otherwise, chance you will bypass this alias and execute standard `/bin/rm` as your own risk.
+- Main goal of rm-safely is to write it in a pure shell script
+  as a gateway and a suppliment to rm, not a replacement.
 
-> [!NOTE]
->
-> - Main goal of rm-safely is to write it in a pure shell script.
-> - Alternative tools:
->   - https://github.com/MilesCranmer/rip2 (rust)
->   - https://github.com/Byron/trash-rs (rust)
+- Alternative tools:
+
+  - https://github.com/MilesCranmer/rip2 (rust)
+  - https://github.com/Byron/trash-rs (rust)
+  - https://github.com/kaelzhang/shell-safe-rm (bash)
+  - https://github.com/hitzhangjie/rm (go)
+
+[Important Reminder],
+
+Regarding the normal bahaviour of unix alias,
+
+- Please keep in mind, _the rm-safely alias is available in current user only_.
+- So please always use `sudo -s` to switch to root user, then run `rm` in the next step.
