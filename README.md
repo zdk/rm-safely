@@ -98,6 +98,7 @@ Or, you could just `/bin/rm` directly.
 
   - https://github.com/MilesCranmer/rip2 (rust)
   - https://github.com/Byron/trash-rs (rust)
+  - https://github.com/andreafrancia/trash-cli (python)
   - https://github.com/kaelzhang/shell-safe-rm (bash)
   - https://github.com/hitzhangjie/rm (go)
 
