@@ -8,16 +8,18 @@ This is just a handy shell wrapping function along with option to directly invok
 
 If you always use `/bin/rm -i` or alias it already, you will probably be fine.
 
-But, with the alias, it can prevent you in case of autocomplete from shell history that left of with unintended `rm -rf`
+But, with this rm-safely alias, it should prevent you in case of autocomplete from shell history that left of with unintended `rm -rf`.
 
 _Keys_,
 
 - Written in shell script, no dependencies.
-- Files save in `~/.local/share/Trash` and mounted volume files save in `/.Trash-$(id-u)` - they persist across reboots.
-- Tested on zsh.
+- Save files in `~/.local/share/Trash` and in `/.Trash-$(id-u)` for mounted volumes.
 - Tested on:
-  - macOS 15.5+
-  - Linux arch-linux 6.17.1-2-cachyos.
+  - Shell
+    - zsh
+  - OS:
+    - macOS 15.5+
+    - Linux arch-linux 6.17.1-2-cachyos
 
 # Demo
 
