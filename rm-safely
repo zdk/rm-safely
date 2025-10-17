@@ -451,9 +451,10 @@ status_hook() {
 
     if type rm | grep -q "function"; then
         print_info "rm function is activated"
-        echo "Trash directory: $TRASH_DIR"
-        if [ -d "$TRASH_FILES" ]; then
-            file_count=$(find "$TRASH_FILES" -type f 2>/dev/null | wc -l)
+        local home_trash="${HOME}/.local/share/Trash"
+        echo "Trash directory: $home_trash"
+        if [ -d "$home_trash/files" ]; then
+            file_count=$(find "$home_trash/files" -type f 2>/dev/null | wc -l)
             echo "Files in trash: $file_count"
         fi
     else
