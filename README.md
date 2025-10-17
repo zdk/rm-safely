@@ -8,16 +8,18 @@ This is just a handy shell wrapping function along with option to directly invok
 
 If you always use `/bin/rm -i` or alias it already, you will probably be fine.
 
-But, with the alias, it can prevent you in case of autocomplete from shell history that left of with unintended `rm -rf`
+But, with this rm-safely alias, it should prevent you in case of autocomplete from shell history that left of with unintended `rm -rf`.
 
 _Keys_,
 
 - Written in shell script, no dependencies.
-- Files save in `~/.local/share/Trash` and mounted volume files save in `/.Trash-$(id-u)` - they persist across reboots.
-- Tested on zsh.
+- Save files in `~/.local/share/Trash` and in `/.Trash-$(id-u)` for mounted volumes.
 - Tested on:
-  - macOS 15.5+
-  - Linux arch-linux 6.17.1-2-cachyos.
+  - Shell
+    - zsh
+  - OS:
+    - macOS 15.5+
+    - Linux arch-linux 6.17.1-2-cachyos
 
 # Demo
 
@@ -47,12 +49,14 @@ then you can decide to delete or clean them later on.
 # Additional features
 
 ```
-rm --rm              Skip trash, execute real 'rm'
-rm --list-trash      Show trash contents from all filesystems
-rm --restore <hash>  Restore a file from trash using its hash
-rm --undo            Restore the last deleted files
-rm --empty-trash     Empty all trash directories
-rm --show-trash-path Display all trash directory paths
+rm -rm                      Skip trash!, really execute rm
+rm -list-trash, -l          Show trash contents from all filesystems
+rm -restore <hash>, -s      Restore a file from trash using its hash
+rm -undo, -u                Restore the last deleted files
+rm -empty-trash             Empty all trash directories
+rm -show-trash-path, -p     Display all trash directory paths
+rm -version                 Show version information
+rm -help                    Show this help
 ```
 
 # Really Remove
@@ -102,4 +106,10 @@ Or, you could just `/bin/rm` directly.
 Regarding the normal bahaviour of unix alias,
 
 - Please keep in mind, _the rm-safely alias is available in current user only_.
-- So please always use `sudo -s` to switch to root user, then run `rm` in the next step.
+
+If you want to make it available in other users too, you have few options like so:
+
+1. Make sure you install in each user you need to have alias available.
+
+2. Always use `sudo -s` to switch to root or another,
+   then run `rm` in the next step as a good habit anyway.
