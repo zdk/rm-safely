@@ -49,14 +49,14 @@ then you can decide to delete or clean them later on.
 # Additional features
 
 ```
-rm -rm                      Skip trash!, really execute rm
-rm -list-trash, -l          Show trash contents from all filesystems
-rm -restore <hash>, -s      Restore a file from trash using its hash
-rm -undo, -u                Restore the last deleted files
-rm -empty-trash             Empty all trash directories
-rm -show-trash-path, -p     Display all trash directory paths
-rm -version                 Show version information
-rm -help                    Show this help
+rm --rm                      Skip trash!, really execute rm
+rm --list-trash, -l          Show trash contents from all filesystems
+rm --restore <hash>, -s      Restore a file from trash using its hash
+rm --undo, -u                Restore the last deleted files
+rm --empty-trash             Empty all trash directories
+rm --show-trash-path, -p     Display all trash directory paths
+rm --version                 Show version information
+rm --help                    Show this help
 ```
 
 # Really Remove
@@ -75,7 +75,8 @@ For examples:
 
 - see the OS rm --help
 
-```rm --rm --help
+```
+rm --rm --help
 /bin/rm: illegal option -- -
 usage: rm [-f | -i] [-dIPRrvWx] file ...
        unlink [--] file
@@ -98,6 +99,7 @@ Or, you could just `/bin/rm` directly.
 
   - https://github.com/MilesCranmer/rip2 (rust)
   - https://github.com/Byron/trash-rs (rust)
+  - https://github.com/andreafrancia/trash-cli (python)
   - https://github.com/kaelzhang/shell-safe-rm (bash)
   - https://github.com/hitzhangjie/rm (go)
 
@@ -107,9 +109,10 @@ Regarding the normal bahaviour of unix alias,
 
 - Please keep in mind, _the rm-safely alias is available in current user only_.
 
-If you want to make it available in other users too, you have few options like so:
+And, you have a few options to make the alias available in another user like so:
 
 1. Make sure you install in each user you need to have alias available.
+   (Either manually or dotfiles should work)
 
 2. Always use `sudo -s` to switch to root or another,
    then run `rm` in the next step as a good habit anyway.
