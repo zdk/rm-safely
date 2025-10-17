@@ -126,12 +126,16 @@ rm() {
             shift
             local has_r=0
             local has_f=0
+            local has_i=0
             for arg in "$@"; do
                 case "$arg" in
                     -*r*) has_r=1 ;;
                 esac
                 case "$arg" in
                     -*f*) has_f=1 ;;
+                esac
+                case "$arg" in
+                    -*i*) has_i=1 ;;
                 esac
             done
 
@@ -140,8 +144,8 @@ rm() {
                 has_rf=1 # Both -r and -f are present
             fi
 
-            if [ $has_rf -eq 1 ]; then
-                echo "WARNING: Permanently delete with 'rm -rf' (bypass trash)?"
+            if [ $has_rf -eq 1 ] || [ $has_i -eq 0 ]; then
+                echo "WARNING: Permanently remove ?"
                 echo -n "Type 'yes' to confirm: "
                 read -r response
                 if [ "$response" != "yes" ]; then
