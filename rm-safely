@@ -69,8 +69,9 @@ get_all_trash_dirs() {
         trash_dirs+=("${HOME}/.local/share/Trash")
     fi
 
+    local home_mount=$(get_mount_point "$HOME")
     local uid=$(id -u)
-    for mount in $(df -h | tail -n +2 | awk '{print $NF}' | grep -v "^/$home_mount$"); do
+    for mount in $(df -h | tail -n +2 | awk '{print $NF}' | grep -v "^${home_mount}$"); do
         if [ -d "${mount}/.Trash-${uid}" ]; then
             trash_dirs+=("${mount}/.Trash-${uid}")
         fi
@@ -157,6 +158,14 @@ rm() {
             /bin/rm "$@"
             ;;
         --empty-trash)
+            echo "WARNING: Permanently delete all files in trash?"
+            echo -n "Type 'yes' to confirm: "
+            read -r response
+            if [ "$response" != "yes" ]; then
+                echo "Cancelled."
+                return 1
+            fi
+
             local found_trash=0
             while IFS= read -r trash_dir; do
                 if [ -d "$trash_dir/files" ] && [ -n "$(ls -A "$trash_dir/files" 2>/dev/null)" ]; then
@@ -391,10 +400,6 @@ HELP
                     failed=1
                 fi
             done
-
-            if [ $failed -eq 0 ]; then
-                /bin/rm "$@" 2>/dev/null || true
-            fi
 
             return $failed
             ;;
