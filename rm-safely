@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-VERSION="1.7.0"
+VERSION="1.8.0"
 HOOK_FILE="$HOME/.rm-safely"
 
 GREEN='\033[0;32m'
@@ -183,8 +183,15 @@ rm() {
             fi
             ;;
         --list-trash|-l)
+            shift
+            local filter_pattern="$1"
             local has_files=0
-            echo "Trash Contents:"
+
+            if [ -n "$filter_pattern" ]; then
+                echo "Trash Contents (filtered by: '$filter_pattern'):"
+            else
+                echo "Trash Contents:"
+            fi
             echo "==============="
             echo "Hash    | Filename                                 | Original Path"
             echo "--------|------------------------------------------|--------------"
@@ -200,8 +207,27 @@ rm() {
                         info_file="$trash_info/${basename}.info"
                         # Generate short hash from filename
                         hash=$(echo -n "$basename" | sha256sum | cut -c1-6)
+
+                        # Get original path
+                        local original_path=""
                         if [ -f "$info_file" ]; then
                             original_path=$(cat "$info_file" 2>/dev/null)
+                        fi
+
+                        # Apply filter if pattern provided
+                        if [ -n "$filter_pattern" ]; then
+                            # Extract original filename by removing timestamp suffix
+                            local original_filename="${basename%_*}"
+
+                            # Case-insensitive match on filename or path
+                            if ! echo "$original_filename" | grep -qi "$filter_pattern" && \
+                               ! echo "$original_path" | grep -qi "$filter_pattern"; then
+                                continue
+                            fi
+                        fi
+
+                        # Display the file
+                        if [ -n "$original_path" ]; then
                             printf "%-7s | %-40s | %s\n" "$hash" "$basename" "$original_path"
                         else
                             printf "%-7s | %-40s | %s\n" "$hash" "$basename" "(unknown)"
@@ -212,7 +238,11 @@ rm() {
             done < <(get_all_trash_dirs)
 
             if [ $has_files -eq 0 ]; then
-                echo "Trash is empty"
+                if [ -n "$filter_pattern" ]; then
+                    echo "No files found matching pattern: '$filter_pattern'"
+                else
+                    echo "Trash is empty"
+                fi
             fi
             ;;
         --undo|-u)
@@ -346,13 +376,23 @@ Files on other filesystems go to <mountpoint>/.Trash-<uid>
 
 Options:
   --rm                      Skip trash!, really execute 'rm'
-  --list-trash, -l          Show trash contents from all filesystems
+  --list-trash [pattern], -l [pattern]
+                            Show trash contents from all filesystems
+                            Optional: filter by pattern (case-insensitive)
   --restore <hash>, -s      Restore a file from trash using its hash
   --undo, -u                Restore the last deleted files
   --empty-trash             Empty all trash directories
   --show-trash-path, -p     Display all trash directory paths
   --version                 Show version information
   --help                    Show this help
+
+Examples:
+  rm file.txt               Move file to trash
+  rm -l                     List all files in trash
+  rm -l ".js"               List only JavaScript files in trash
+  rm -l "project"           List files with "project" in name or path
+  rm -s a1b2c3              Restore file with hash a1b2c3
+  rm -u                     Undo last deletion
 HELP
             ;;
         *)
