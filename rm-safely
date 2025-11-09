@@ -81,17 +81,20 @@ get_all_trash_dirs() {
 }
 
 add_to_undo_stack() {
+    # Create undo stack file if it doesn't exist
+    if [ ! -f "$UNDO_STACK" ]; then
+        touch "$UNDO_STACK"
+    fi
+
     local trash_name="$1"
     local trash_dir="$2"
     echo "${trash_name}|${trash_dir}" >> "$UNDO_STACK"
 
-    if [ -f "$UNDO_STACK" ]; then
-        local line_count=$(wc -l < "$UNDO_STACK")
-        if [ "$line_count" -gt "$UNDO_LIMIT" ]; then
-            local lines_to_keep=$((line_count - UNDO_LIMIT))
-            tail -n "$UNDO_LIMIT" "$UNDO_STACK" > "${UNDO_STACK}.tmp"
-            mv "${UNDO_STACK}.tmp" "$UNDO_STACK"
-        fi
+    local line_count=$(wc -l < "$UNDO_STACK")
+    if [ "$line_count" -gt "$UNDO_LIMIT" ]; then
+        local lines_to_keep=$((line_count - UNDO_LIMIT))
+        tail -n "$UNDO_LIMIT" "$UNDO_STACK" > "${UNDO_STACK}.tmp"
+        mv "${UNDO_STACK}.tmp" "$UNDO_STACK"
     fi
 }
 
