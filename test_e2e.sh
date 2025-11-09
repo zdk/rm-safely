@@ -239,6 +239,84 @@ else
     print_fail "Should show trash path"
 fi
 
+print_scenario "Search/Filter Trash Contents"
+
+print_test "Create files with unique patterns for filter testing"
+echo "project code" >uniqueproject123_config.js
+echo "app code" >uniqueapp456_settings.json
+echo "readme text" >uniqueREADME789.md
+echo "test code" >uniquehelper999_test.py
+rm uniqueproject123_config.js uniqueapp456_settings.json uniqueREADME789.md uniquehelper999_test.py
+print_pass "Created and deleted 4 files with unique patterns"
+
+print_test "Filter by filename pattern - includes match"
+filter_output=$(rm --list-trash "uniqueproject123" 2>&1)
+if echo "$filter_output" | grep -q "uniqueproject123_config.js"; then
+    print_pass "Filter includes matching file (uniqueproject123)"
+else
+    print_fail "Filter should show uniqueproject123_config.js"
+fi
+
+print_test "Filter by filename pattern - excludes non-match"
+filter_output=$(rm --list-trash "uniqueproject123" 2>&1)
+if ! echo "$filter_output" | grep -q "uniqueapp456_settings.json"; then
+    print_pass "Filter excludes non-matching file"
+else
+    print_fail "Filter should not show uniqueapp456_settings.json when filtering by uniqueproject123"
+fi
+
+print_test "Filter with different unique pattern"
+filter_output=$(rm --list-trash "helper999" 2>&1)
+if echo "$filter_output" | grep -q "uniquehelper999_test.py"; then
+    print_pass "Filter shows matching file (helper999)"
+else
+    print_fail "Filter should show uniquehelper999_test.py"
+fi
+
+print_test "Filter with file extension pattern"
+filter_output=$(rm --list-trash "uniqueREADME789.md" 2>&1)
+if echo "$filter_output" | grep -q "uniqueREADME789.md" && \
+   ! echo "$filter_output" | grep -q "uniquehelper999_test.py"; then
+    print_pass "Filter matches specific markdown file"
+else
+    print_fail "Filter should show uniqueREADME789.md but not .py files"
+fi
+
+print_test "Filter with guaranteed no matches"
+filter_output=$(rm --list-trash "xYz123NoMatchEver456" 2>&1)
+if echo "$filter_output" | grep -q "No files found matching pattern"; then
+    print_pass "Filter correctly reports no matches"
+else
+    print_fail "Should show 'No files found' message for non-existent pattern"
+fi
+
+print_test "Case-insensitive filter test (uppercase)"
+filter_output=$(rm --list-trash "UNIQUEREADME789" 2>&1)
+if echo "$filter_output" | grep -q "uniqueREADME789.md"; then
+    print_pass "Filter is case-insensitive (uppercase pattern)"
+else
+    print_fail "Filter should match uniqueREADME789.md with uppercase pattern"
+fi
+
+print_test "Case-insensitive filter test (lowercase)"
+filter_output=$(rm --list-trash "uniquereadme789" 2>&1)
+if echo "$filter_output" | grep -q "uniqueREADME789.md"; then
+    print_pass "Filter is case-insensitive (lowercase pattern)"
+else
+    print_fail "Filter should match uniqueREADME789.md with lowercase pattern"
+fi
+
+print_test "List all trash without filter shows test files"
+list_output=$(rm --list-trash 2>&1)
+if echo "$list_output" | grep -q "uniqueproject123_config.js" && \
+   echo "$list_output" | grep -q "uniqueapp456_settings.json" && \
+   echo "$list_output" | grep -q "uniqueREADME789.md" && \
+   echo "$list_output" | grep -q "uniquehelper999_test.py"; then
+    print_pass "Listing all trash shows all test files"
+else
+    print_fail "Should show all test files when no filter is provided"
+fi
+
 print_scenario "Direct Deletion (Bypass Trash)"
 print_test "Create file for permanent deletion"
 echo "disposable" >disposable.txt
