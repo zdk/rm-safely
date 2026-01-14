@@ -225,7 +225,8 @@ rm() {
                 if [ -d "$trash_files" ]; then
                     for file in "$trash_files"/*; do
                         [ -e "$file" ] || continue
-                        basename="$(basename "$file")"
+                        # Optimize: use parameter expansion instead of basename
+                        basename="${file##*/}"
                         info_file="$trash_info/${basename}.info"
                         # Generate short hash from filename using cksum (faster than sha256sum)
                         hash=$(printf "%s" "$basename" | cksum | cut -d' ' -f1 | cut -c1-6)
@@ -290,8 +291,9 @@ rm() {
             fi
 
             local original_path=$(cat "$info_file" 2>/dev/null)
-            local original_dir=$(dirname "$original_path")
-            local original_name=$(basename "$original_path")
+            # Optimize: use parameter expansion instead of dirname/basename
+            local original_dir="${original_path%/*}"
+            local original_name="${original_path##*/}"
 
             if [ ! -d "$original_dir" ]; then
                 echo "WARNING: Original directory '$original_dir' no longer exists"
@@ -332,7 +334,8 @@ rm() {
                 if [ -d "$trash_files" ]; then
                     for file in "$trash_files"/*; do
                         [ -e "$file" ] || continue
-                        basename="$(basename "$file")"
+                        # Optimize: use parameter expansion instead of basename
+                        basename="${file##*/}"
                         hash=$(printf "%s" "$basename" | cksum | cut -d' ' -f1 | cut -c1-6)
                         if [ "$hash" = "$target_hash" ]; then
                             found_file="$file"
@@ -357,8 +360,9 @@ rm() {
             fi
 
             original_path=$(cat "$info_file" 2>/dev/null)
-            original_dir=$(dirname "$original_path")
-            original_name=$(basename "$original_path")
+            # Optimize: use parameter expansion instead of dirname/basename
+            original_dir="${original_path%/*}"
+            original_name="${original_path##*/}"
 
             if [ ! -d "$original_dir" ]; then
                 echo "WARNING: Original directory '$original_dir' no longer exists"
@@ -457,7 +461,8 @@ HELP
                     continue
                 fi
 
-                basename=$(basename "$arg")
+                # Optimize: use parameter expansion instead of basename command
+                basename="${arg##*/}"
                 trash_name="${basename}_$(date +%s%N)"
 
                 if mv "$arg" "$TRASH_FILES/$trash_name" 2>/dev/null; then
