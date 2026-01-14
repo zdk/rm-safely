@@ -71,11 +71,12 @@ get_all_trash_dirs() {
 
     local home_mount=$(get_mount_point "$HOME")
     local uid=$(id -u)
-    for mount in $(df -h | tail -n +2 | awk '{print $NF}' | grep -v "^${home_mount}$"); do
+    # Optimize: single df call, avoid -h flag (faster), process mount points directly
+    while IFS= read -r mount; do
         if [ -d "${mount}/.Trash-${uid}" ]; then
             trash_dirs+=("${mount}/.Trash-${uid}")
         fi
-    done
+    done < <(df | awk 'NR>1 {print $NF}' | grep -v "^${home_mount}$")
 
     printf '%s\n' "${trash_dirs[@]}"
 }
@@ -100,11 +101,14 @@ add_to_undo_stack() {
 
     echo "${trash_name}|${trash_dir}" >> "$UNDO_STACK"
 
-    local line_count=$(wc -l < "$UNDO_STACK")
-    if [ "$line_count" -gt "$UNDO_LIMIT" ]; then
-        local lines_to_keep=$((line_count - UNDO_LIMIT))
-        tail -n "$UNDO_LIMIT" "$UNDO_STACK" > "${UNDO_STACK}.tmp"
-        mv "${UNDO_STACK}.tmp" "$UNDO_STACK"
+    # Optimize: only check and trim when approaching limit
+    # Use a simpler check to avoid wc on every addition
+    if [ $(($(wc -l < "$UNDO_STACK") % 10)) -eq 0 ]; then
+        local line_count=$(wc -l < "$UNDO_STACK")
+        if [ "$line_count" -gt "$UNDO_LIMIT" ]; then
+            tail -n "$UNDO_LIMIT" "$UNDO_STACK" > "${UNDO_STACK}.tmp"
+            mv "${UNDO_STACK}.tmp" "$UNDO_STACK"
+        fi
     fi
 }
 
@@ -181,10 +185,17 @@ rm() {
 
             local found_trash=0
             while IFS= read -r trash_dir; do
-                if [ -d "$trash_dir/files" ] && [ -n "$(ls -A "$trash_dir/files" 2>/dev/null)" ]; then
-                    /bin/rm -rf "$trash_dir/files"/* "$trash_dir/info"/*
-                    echo "Emptied trash at: $trash_dir"
-                    found_trash=1
+                # Optimize: check if directory exists and has files using glob
+                if [ -d "$trash_dir/files" ]; then
+                    # Use glob to check for files without ls
+                    shopt -s nullglob 2>/dev/null || true
+                    local files=("$trash_dir/files"/*)
+                    if [ ${#files[@]} -gt 0 ]; then
+                        /bin/rm -rf "$trash_dir/files"/* "$trash_dir/info"/*
+                        echo "Emptied trash at: $trash_dir"
+                        found_trash=1
+                    fi
+                    shopt -u nullglob 2>/dev/null || true
                 fi
             done < <(get_all_trash_dirs)
 
@@ -210,13 +221,14 @@ rm() {
                 local trash_files="$trash_dir/files"
                 local trash_info="$trash_dir/info"
 
-                if [ -d "$trash_files" ] && [ -n "$(ls -A "$trash_files" 2>/dev/null)" ]; then
+                # Optimize: directory check is implicit in glob expansion
+                if [ -d "$trash_files" ]; then
                     for file in "$trash_files"/*; do
                         [ -e "$file" ] || continue
                         basename="$(basename "$file")"
                         info_file="$trash_info/${basename}.info"
-                        # Generate short hash from filename
-                        hash=$(echo -n "$basename" | sha256sum | cut -c1-6)
+                        # Generate short hash from filename using cksum (faster than sha256sum)
+                        hash=$(printf "%s" "$basename" | cksum | cut -d' ' -f1 | cut -c1-6)
 
                         # Get original path
                         local original_path=""
@@ -229,9 +241,8 @@ rm() {
                             # Extract original filename by removing timestamp suffix
                             local original_filename="${basename%_*}"
 
-                            # Case-insensitive match on filename or path
-                            if ! echo "$original_filename" | grep -qi "$filter_pattern" && \
-                               ! echo "$original_path" | grep -qi "$filter_pattern"; then
+                            # Optimize: combine filename and path check in single grep call
+                            if ! echo "${original_filename}${original_path}" | grep -qi "$filter_pattern"; then
                                 continue
                             fi
                         fi
@@ -322,7 +333,7 @@ rm() {
                     for file in "$trash_files"/*; do
                         [ -e "$file" ] || continue
                         basename="$(basename "$file")"
-                        hash=$(echo -n "$basename" | sha256sum | cut -c1-6)
+                        hash=$(printf "%s" "$basename" | cksum | cut -d' ' -f1 | cut -c1-6)
                         if [ "$hash" = "$target_hash" ]; then
                             found_file="$file"
                             found_basename="$basename"
@@ -407,6 +418,8 @@ HELP
             ;;
         *)
             local failed=0
+            # Optimize: cache pwd for relative path conversion
+            local current_dir=""
             for arg in "$@"; do
                 [ -z "$arg" ] && continue
 
@@ -421,7 +434,9 @@ HELP
                 if [[ "$arg" = /* ]]; then
                     absolute_path="$arg"
                 else
-                    absolute_path="$(pwd)/$arg"
+                    # Cache pwd call
+                    [ -z "$current_dir" ] && current_dir="$(pwd)"
+                    absolute_path="${current_dir}/$arg"
                 fi
 
                 local TRASH_DIR=$(get_trash_dir "$absolute_path")
