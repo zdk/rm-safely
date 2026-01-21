@@ -42,7 +42,7 @@ create_hook_file() {
 # rm-safely - rm alias that moves files to a trash directory before deletion
 
 VERSION=__VERSION_PLACEHOLDER__
-UNDO_STACK="$HOME/.rm-safely-undo-stack"
+export UNDO_STACK="$HOME/.rm-safely-undo-stack"
 UNDO_LIMIT=100
 
 get_mount_point() {
