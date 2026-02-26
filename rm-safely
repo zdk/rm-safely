@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-VERSION="1.8.0"
+VERSION="1.9.0"
 HOOK_FILE="$HOME/.rm-safely"
 
 GREEN='\033[0;32m'
@@ -43,7 +43,7 @@ create_hook_file() {
 
 VERSION=__VERSION_PLACEHOLDER__
 export UNDO_STACK="$HOME/.rm-safely-undo-stack"
-UNDO_LIMIT=100
+UNDO_LIMIT="${UNDO_LIMIT:-100}"
 
 get_mount_point() {
     local file="$1"
@@ -80,6 +80,43 @@ get_all_trash_dirs() {
     printf '%s\n' "${trash_dirs[@]}"
 }
 
+compute_checksum() {
+    local target="$1"
+    if [ -f "$target" ] && [ ! -L "$target" ]; then
+        sha256sum "$target" | cut -d' ' -f1
+    elif [ -L "$target" ]; then
+        readlink "$target" | sha256sum | cut -d' ' -f1
+    elif [ -d "$target" ]; then
+        (cd "$target" && find . -type f -print0 2>/dev/null | sort -z | xargs -0 sha256sum 2>/dev/null | sha256sum | cut -d' ' -f1)
+    fi
+}
+
+verify_checksum() {
+    local trash_file="$1"
+    local info_file="$2"
+
+    local stored_checksum
+    stored_checksum=$(sed -n '2p' "$info_file" 2>/dev/null)
+
+    # No checksum stored (old .info file) - skip verification
+    if [ -z "$stored_checksum" ] || ! echo "$stored_checksum" | grep -q '^sha256:'; then
+        return 0
+    fi
+
+    stored_checksum="${stored_checksum#sha256:}"
+    local actual_checksum
+    actual_checksum=$(compute_checksum "$trash_file")
+
+    if [ "$stored_checksum" != "$actual_checksum" ]; then
+        echo "ERROR: Integrity check failed!"
+        echo "  Expected: $stored_checksum"
+        echo "  Actual:   $actual_checksum"
+        echo "The file may have been modified or corrupted while in trash."
+        return 1
+    fi
+    return 0
+}
+
 add_to_undo_stack() {
     if [ -z "$UNDO_STACK" ]; then
         echo "ERROR: UNDO_STACK not set" >&2
@@ -100,10 +137,10 @@ add_to_undo_stack() {
 
     echo "${trash_name}|${trash_dir}" >> "$UNDO_STACK"
 
+    local undo_limit="${UNDO_LIMIT:-100}"
     local line_count=$(wc -l < "$UNDO_STACK")
-    if [ "$line_count" -gt "$UNDO_LIMIT" ]; then
-        local lines_to_keep=$((line_count - UNDO_LIMIT))
-        tail -n "$UNDO_LIMIT" "$UNDO_STACK" > "${UNDO_STACK}.tmp"
+    if [ "$line_count" -gt "$undo_limit" ]; then
+        tail -n "$undo_limit" "$UNDO_STACK" > "${UNDO_STACK}.tmp"
         mv "${UNDO_STACK}.tmp" "$UNDO_STACK"
     fi
 }
@@ -218,10 +255,10 @@ rm() {
                         # Generate short hash from filename
                         hash=$(echo -n "$basename" | sha256sum | cut -c1-6)
 
-                        # Get original path
+                        # Get original path (line 1 of info file)
                         local original_path=""
                         if [ -f "$info_file" ]; then
-                            original_path=$(cat "$info_file" 2>/dev/null)
+                            original_path=$(sed -n '1p' "$info_file" 2>/dev/null)
                         fi
 
                         # Apply filter if pattern provided
@@ -278,9 +315,15 @@ rm() {
                 return 1
             fi
 
-            local original_path=$(cat "$info_file" 2>/dev/null)
+            local original_path
+            original_path=$(sed -n '1p' "$info_file" 2>/dev/null)
             local original_dir=$(dirname "$original_path")
             local original_name=$(basename "$original_path")
+
+            if ! verify_checksum "$trash_file" "$info_file"; then
+                echo "${trash_name}|${trash_dir}" >> "$UNDO_STACK"
+                return 1
+            fi
 
             if [ ! -d "$original_dir" ]; then
                 echo "WARNING: Original directory '$original_dir' no longer exists"
@@ -345,9 +388,13 @@ rm() {
                 return 1
             fi
 
-            original_path=$(cat "$info_file" 2>/dev/null)
+            original_path=$(sed -n '1p' "$info_file" 2>/dev/null)
             original_dir=$(dirname "$original_path")
             original_name=$(basename "$original_path")
+
+            if ! verify_checksum "$found_file" "$info_file"; then
+                return 1
+            fi
 
             if [ ! -d "$original_dir" ]; then
                 echo "WARNING: Original directory '$original_dir' no longer exists"
@@ -385,7 +432,7 @@ Files on the same filesystem as \$HOME go to ~/.local/share/Trash
 Files on other filesystems go to <mountpoint>/.Trash-<uid>
 
 Options:
-  --rm                      Skip trash!, really execute 'rm'
+  --rm                      Skip rm-safely, bypass to execute '/bin/rm'
   --list-trash [pattern], -l [pattern]
                             Show trash contents from all filesystems
                             Optional: filter by pattern (case-insensitive)
@@ -447,6 +494,11 @@ HELP
 
                 if mv "$arg" "$TRASH_FILES/$trash_name" 2>/dev/null; then
                     echo "$absolute_path" > "$TRASH_INFO/${trash_name}.info"
+                    local checksum
+                    checksum=$(compute_checksum "$TRASH_FILES/$trash_name")
+                    if [ -n "$checksum" ]; then
+                        echo "sha256:$checksum" >> "$TRASH_INFO/${trash_name}.info"
+                    fi
                     add_to_undo_stack "$trash_name" "$TRASH_DIR"
                     [ -d "$TRASH_FILES/$trash_name" ] && echo "Moved directory '$arg' to trash" || echo "Moved '$arg' to trash"
                 else

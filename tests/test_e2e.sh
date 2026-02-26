@@ -422,6 +422,99 @@ else
     print_fail "Should restore to /tmp"
 fi
 
+print_scenario "Integrity Verification"
+cd "$TEST_DIR" || exit 1
+
+print_test "Checksum stored in .info file on backup"
+echo "integrity test data" >integrity_test.txt
+rm integrity_test.txt
+# Find the info file for this item
+latest_entry=$(tail -n 1 "$UNDO_STACK")
+trash_name="${latest_entry%|*}"
+trash_dir="${latest_entry#*|}"
+info_file="$trash_dir/info/${trash_name}.info"
+if sed -n '2p' "$info_file" | grep -q '^sha256:'; then
+    print_pass "Checksum stored in .info file"
+else
+    print_fail "Should store sha256 checksum on line 2 of .info file"
+fi
+
+print_test "Integrity check passes on normal restore"
+output=$(rm --undo 2>&1)
+if [ -f integrity_test.txt ] && [ "$(cat integrity_test.txt)" = "integrity test data" ]; then
+    print_pass "File restored with integrity verified"
+else
+    print_fail "Should restore file normally when integrity is intact"
+fi
+
+print_test "Tampered file detected on undo restore"
+echo "tamper test data" >tamper_test.txt
+rm tamper_test.txt
+latest_entry=$(tail -n 1 "$UNDO_STACK")
+trash_name="${latest_entry%|*}"
+trash_dir="${latest_entry#*|}"
+trash_file="$trash_dir/files/$trash_name"
+# Tamper with the file in trash
+echo "TAMPERED CONTENT" > "$trash_file"
+output=$(rm --undo 2>&1 || true)
+if echo "$output" | grep -q "Integrity check failed"; then
+    print_pass "Tampered file detected on undo"
+else
+    print_fail "Should detect tampered file on undo restore"
+fi
+# Clean up tampered file from trash and undo stack entry
+/bin/rm -f "$trash_file" "$trash_dir/info/${trash_name}.info" 2>/dev/null
+sed -i.bak '$ d' "$UNDO_STACK" 2>/dev/null; /bin/rm -f "${UNDO_STACK}.bak"
+
+print_test "Tampered file detected on hash restore"
+echo "tamper hash test" >tamper_hash.txt
+rm tamper_hash.txt
+latest_entry=$(tail -n 1 "$UNDO_STACK")
+trash_name="${latest_entry%|*}"
+trash_dir="${latest_entry#*|}"
+trash_file="$trash_dir/files/$trash_name"
+hash=$(echo -n "$trash_name" | sha256sum | cut -c1-6)
+# Tamper with the file in trash
+echo "TAMPERED" > "$trash_file"
+output=$(rm --restore "$hash" 2>&1 || true)
+if echo "$output" | grep -q "Integrity check failed"; then
+    print_pass "Tampered file detected on hash restore"
+else
+    print_fail "Should detect tampered file on hash restore"
+fi
+# Clean up
+/bin/rm -f "$trash_file" "$trash_dir/info/${trash_name}.info" 2>/dev/null
+sed -i.bak '$ d' "$UNDO_STACK" 2>/dev/null; /bin/rm -f "${UNDO_STACK}.bak"
+
+print_test "Backwards compatible with old .info files (no checksum)"
+echo "old format test" >old_format.txt
+rm old_format.txt
+latest_entry=$(tail -n 1 "$UNDO_STACK")
+trash_name="${latest_entry%|*}"
+trash_dir="${latest_entry#*|}"
+info_file="$trash_dir/info/${trash_name}.info"
+# Remove the checksum line to simulate old .info format
+original_path=$(sed -n '1p' "$info_file")
+echo "$original_path" > "$info_file"
+output=$(rm --undo 2>&1)
+if [ -f old_format.txt ] && [ "$(cat old_format.txt)" = "old format test" ]; then
+    print_pass "Backwards compatible - restored without checksum"
+else
+    print_fail "Should restore normally when no checksum is present (old format)"
+fi
+
+print_test "Directory integrity check on restore"
+mkdir -p integ_dir/sub
+echo "file1" >integ_dir/file1.txt
+echo "file2" >integ_dir/sub/file2.txt
+rm -r integ_dir
+output=$(rm --undo 2>&1)
+if [ -d integ_dir ] && [ -f integ_dir/file1.txt ] && [ -f integ_dir/sub/file2.txt ]; then
+    print_pass "Directory restored with integrity verified"
+else
+    print_fail "Should restore directory with integrity check"
+fi
+
 print_scenario "Cleanup"
 print_test "Cleaning up test workspace"
 cd "$SCRIPT_DIR" || exit 1
