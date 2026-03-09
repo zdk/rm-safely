@@ -43,11 +43,48 @@ create_hook_file() {
 
 VERSION=__VERSION_PLACEHOLDER__
 export UNDO_STACK="$HOME/.rm-safely-undo-stack"
+BLOCK_FILE="$HOME/.rm-safely-block"
 UNDO_LIMIT=100
+
+resolve_path() {
+    local p="$1"
+    [[ "$p" != /* ]] && p="$(pwd)/$p"
+    if command -v realpath >/dev/null 2>&1; then
+        realpath -m "$p" 2>/dev/null || echo "$p"
+    else
+        local r="" s
+        while [[ "$p" == */./* ]]; do p="${p//\/.\///}"; done
+        p="${p%/.}" && p="${p%/}"
+        while [ -n "$p" ]; do
+            s="${p%%/*}"
+            p="${p#*/}" && [[ "$p" == "$s" ]] && p=""
+            [ -z "$s" ] && continue
+            [ "$s" = ".." ] && r="${r%/*}" || r="$r/$s"
+        done
+        echo "${r:-/}"
+    fi
+}
+
+is_blocked() {
+    local p
+    p=$(resolve_path "$1")
+    [ -e "$p" ] && command -v realpath >/dev/null 2>&1 && p=$(realpath "$p" 2>/dev/null || echo "$p")
+    p="${p%/}"
+    local paths=()
+    [ -f "$BLOCK_FILE" ] && while IFS= read -r line; do
+        [[ -z "$line" || "$line" == \#* ]] && continue
+        paths+=("${line/#\~/$HOME}")
+    done < "$BLOCK_FILE"
+    for np in "${paths[@]}"; do
+        np=$(resolve_path "$np")
+        [[ "$p" == "$np" || "$p" == "$np"/* ]] && echo "$np" && return 0
+    done
+    return 1
+}
 
 get_mount_point() {
     local file="$1"
-    df "$file" 2>/dev/null | tail -1 | awk '{print $NF}'
+    df "$file" 2>/dev/null | tail -1 | command awk '{print $NF}'
 }
 
 get_trash_dir() {
@@ -71,7 +108,7 @@ get_all_trash_dirs() {
 
     local home_mount=$(get_mount_point "$HOME")
     local uid=$(id -u)
-    for mount in $(df -h | tail -n +2 | awk '{print $NF}' | grep -v "^${home_mount}$"); do
+    for mount in $(df -h | tail -n +2 | command awk '{print $NF}' | command grep -v "^${home_mount}$"); do
         if [ -d "${mount}/.Trash-${uid}" ]; then
             trash_dirs+=("${mount}/.Trash-${uid}")
         fi
@@ -123,7 +160,7 @@ pop_from_undo_stack() {
         *) return 1 ;;  # No pipe, invalid
     esac
 
-    sed -i.bak '$ d' "$UNDO_STACK"
+    command sed -i.bak '$ d' "$UNDO_STACK"
     /bin/rm -f "${UNDO_STACK}.bak"
 
     echo "$last_entry"
@@ -230,8 +267,8 @@ rm() {
                             local original_filename="${basename%_*}"
 
                             # Case-insensitive match on filename or path
-                            if ! echo "$original_filename" | grep -qi "$filter_pattern" && \
-                               ! echo "$original_path" | grep -qi "$filter_pattern"; then
+                            if ! echo "$original_filename" | command grep -qi "$filter_pattern" && \
+                               ! echo "$original_path" | command grep -qi "$filter_pattern"; then
                                 continue
                             fi
                         fi
@@ -368,6 +405,63 @@ rm() {
                 return 1
             fi
             ;;
+        --block|-b)
+            shift
+            case "${1:-}" in
+                --list|"")
+                    if [ -f "$BLOCK_FILE" ] && command grep -qv '^$' "$BLOCK_FILE" 2>/dev/null; then
+                        echo "Protected paths:"
+                        command grep -v '^#' "$BLOCK_FILE" | command grep -v '^$' | command sed 's/^/  /'
+                    else
+                        echo "No protected paths"
+                    fi
+                    ;;
+                --remove)
+                    shift
+                    [ -z "${1:-}" ] && echo "Usage: rm --block --remove <path>" && return 1
+                    [ ! -f "$BLOCK_FILE" ] && echo "No protected paths" && return 1
+                    local rp matched_line=""
+                    rp=$(resolve_path "${1/#\~/$HOME}")
+                    while IFS= read -r line; do
+                        [[ -z "$line" || "$line" == \#* ]] && continue
+                        [ "$(resolve_path "$line")" = "$rp" ] && matched_line="$line" && break
+                    done < "$BLOCK_FILE"
+                    if [ -n "$matched_line" ]; then
+                        command grep -vxF "$matched_line" "$BLOCK_FILE" > "${BLOCK_FILE}.tmp"
+                        mv "${BLOCK_FILE}.tmp" "$BLOCK_FILE"
+                        echo "Unprotected: $rp"
+                    else
+                        echo "Not found: $1" && return 1
+                    fi
+                    ;;
+                --help)
+                    echo "Usage: rm -b <path>       Protect path from deletion"
+                    echo "       rm -b --list       List all protected paths"
+                    echo "       rm -b --remove <path>  Remove path from protection"
+                    ;;
+                -*)
+                    echo "Unknown option: $1" && return 1
+                    ;;
+                *)
+                    for arg in "$@"; do
+                        local ap already=0
+                        ap=$(resolve_path "${arg/#\~/$HOME}")
+                        if [ -f "$BLOCK_FILE" ]; then
+                            while IFS= read -r line; do
+                                [[ -z "$line" || "$line" == \#* ]] && continue
+                                [ "$(resolve_path "$line")" = "$ap" ] && already=1 && break
+                            done < "$BLOCK_FILE"
+                        fi
+                        if [ "$already" = 1 ]; then
+                            echo "Already protected: $ap"
+                            continue
+                        fi
+                        echo "$ap" >> "$BLOCK_FILE"
+                        echo "Protected: $ap"
+                    done
+                    ;;
+            esac
+            ;;
         --show-trash-path|-p)
             echo "Home trash: $HOME_TRASH_DIR"
             echo "All trash directories:"
@@ -392,6 +486,9 @@ Options:
   --restore <hash>, -s      Restore a file from trash using its hash
   --undo, -u                Restore the last deleted files
   --empty-trash             Empty all trash directories
+  --block [path], -b        Protect path from deletion
+  --block --list            List all protected paths
+  --block --remove <path>   Remove path from protection
   --show-trash-path, -p     Display all trash directory paths
   --version                 Show version information
   --help                    Show this help
@@ -403,6 +500,8 @@ Examples:
   rm -l "project"           List files with "project" in name or path
   rm -s a1b2c3              Restore file with hash a1b2c3
   rm -u                     Undo last deletion
+  rm -b ~/.secrets          Protect ~/.secrets from deletion
+  rm -b --list              Show all protected paths
 HELP
             ;;
         *)
@@ -414,6 +513,13 @@ HELP
 
                 if [ ! -e "$arg" ] && [ ! -L "$arg" ]; then
                     echo "rm: cannot remove '$arg': No such file or directory"
+                    failed=1
+                    continue
+                fi
+
+                local matched=$(is_blocked "$arg")
+                if [ -n "$matched" ]; then
+                    echo "rm-safely: '$arg' is protected (use 'rm -b --remove' to unprotect)"
                     failed=1
                     continue
                 fi

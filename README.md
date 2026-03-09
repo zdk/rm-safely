@@ -54,6 +54,10 @@ rm --list-trash, -l          Show trash contents from all filesystems
 rm --restore <hash>, -s      Restore a file from trash using its hash
 rm --undo, -u                Restore the last deleted files
 rm --empty-trash             Empty all trash directories
+rm --block <path>, -b        Protect path is blocked from rm
+rm --block --list            List all protected paths
+rm --block --remove <path>   Remove path from protection
+rm --block --help            Show block usage
 rm --show-trash-path, -p     Display all trash directory paths
 rm --version                 Show version information
 rm --help                    Show this help
