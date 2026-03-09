@@ -131,7 +131,7 @@ pop_from_undo_stack() {
 }
 
 rm() {
-    setopt local_options null_glob 2>/dev/null || true
+    setopt local_options null_glob dot_glob 2>/dev/null || true
     local HOME_TRASH_DIR="${HOME}/.local/share/Trash"
     mkdir -p "${HOME_TRASH_DIR}/files" "${HOME_TRASH_DIR}/info" 2>/dev/null
 
