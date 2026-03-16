@@ -1,0 +1,11 @@
+FROM alpine:3.21
+
+RUN apk add --no-cache bash zsh coreutils
+
+WORKDIR /app
+COPY rm-safely ./
+COPY tests/ ./tests/
+
+RUN bash rm-safely install
+
+CMD ["bash", "tests/test_e2e.sh"]

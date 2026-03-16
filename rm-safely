@@ -45,15 +45,15 @@ VERSION=__VERSION_PLACEHOLDER__
 export UNDO_STACK="$HOME/.rm-safely-undo-stack"
 UNDO_LIMIT=100
 
-get_mount_point() {
+_rm_safely_get_mount_point() {
     local file="$1"
     df "$file" 2>/dev/null | tail -1 | awk '{print $NF}'
 }
 
-get_trash_dir() {
+_rm_safely_get_trash_dir() {
     local file="$1"
-    local home_mount=$(get_mount_point "$HOME")
-    local file_mount=$(get_mount_point "$file")
+    local home_mount=$(_rm_safely_get_mount_point "$HOME")
+    local file_mount=$(_rm_safely_get_mount_point "$file")
 
     if [ "$home_mount" = "$file_mount" ]; then
         echo "${HOME}/.local/share/Trash"
@@ -62,14 +62,14 @@ get_trash_dir() {
     fi
 }
 
-get_all_trash_dirs() {
+_rm_safely_get_all_trash_dirs() {
     local trash_dirs=()
 
     if [ -d "${HOME}/.local/share/Trash" ]; then
         trash_dirs+=("${HOME}/.local/share/Trash")
     fi
 
-    local home_mount=$(get_mount_point "$HOME")
+    local home_mount=$(_rm_safely_get_mount_point "$HOME")
     local uid=$(id -u)
     for mount in $(df -h | tail -n +2 | awk '{print $NF}' | grep -v "^${home_mount}$"); do
         if [ -d "${mount}/.Trash-${uid}" ]; then
@@ -80,7 +80,7 @@ get_all_trash_dirs() {
     printf '%s\n' "${trash_dirs[@]}"
 }
 
-add_to_undo_stack() {
+_rm_safely_add_to_undo_stack() {
     if [ -z "$UNDO_STACK" ]; then
         echo "ERROR: UNDO_STACK not set" >&2
         return 1
@@ -94,7 +94,7 @@ add_to_undo_stack() {
     local trash_dir="$2"
 
     if [ -z "$trash_name" ] || [ -z "$trash_dir" ]; then
-        echo "ERROR: Invalid arguments to add_to_undo_stack" >&2
+        echo "ERROR: Invalid arguments to _rm_safely_add_to_undo_stack" >&2
         return 1
     fi
 
@@ -108,7 +108,7 @@ add_to_undo_stack() {
     fi
 }
 
-pop_from_undo_stack() {
+_rm_safely_pop_from_undo_stack() {
     if [ ! -f "$UNDO_STACK" ] || [ ! -s "$UNDO_STACK" ]; then
         return 1
     fi
@@ -128,6 +128,15 @@ pop_from_undo_stack() {
 
     echo "$last_entry"
     return 0
+}
+
+_rm_safely_is_root() {
+    local p="$1"
+    [[ "$p" != -* ]] || return 1
+    [[ "$p" = /* ]] && p="$p" || p="$(pwd)/$p"
+    p="$(cd "$p" 2>/dev/null && pwd || echo "$p")"
+    p="${p%/}"
+    [ -z "$p" ] || [ "$p" = "/" ]
 }
 
 rm() {
@@ -158,6 +167,13 @@ rm() {
                 has_rf=1 # Both -r and -f are present
             fi
 
+            for arg in "$@"; do
+                if _rm_safely_is_root "$arg"; then
+                    echo "rm: refusing to remove '/'"
+                    return 1
+                fi
+            done
+
             if [ $has_rf -eq 1 ] || [ $has_i -eq 0 ]; then
                 echo "WARNING: Permanently remove ?"
                 echo -n "Type 'yes' to confirm: "
@@ -186,7 +202,7 @@ rm() {
                     echo "Emptied trash at: $trash_dir"
                     found_trash=1
                 fi
-            done < <(get_all_trash_dirs)
+            done < <(_rm_safely_get_all_trash_dirs)
 
             if [ $found_trash -eq 0 ]; then
                 echo "All trash directories are empty"
@@ -245,7 +261,7 @@ rm() {
                         has_files=1
                     done
                 fi
-            done < <(get_all_trash_dirs)
+            done < <(_rm_safely_get_all_trash_dirs)
 
             if [ $has_files -eq 0 ]; then
                 if [ -n "$filter_pattern" ]; then
@@ -257,7 +273,7 @@ rm() {
             ;;
         --undo|-u)
             local entry
-            entry=$(pop_from_undo_stack)
+            entry=$(_rm_safely_pop_from_undo_stack)
             if [ $? -ne 0 ]; then
                 echo "ERROR: Nothing to undo (undo stack is empty)"
                 return 1
@@ -331,7 +347,7 @@ rm() {
                         fi
                     done
                 fi
-            done < <(get_all_trash_dirs)
+            done < <(_rm_safely_get_all_trash_dirs)
 
             if [ -z "$found_file" ]; then
                 echo "ERROR: No file found with hash '$target_hash'"
@@ -371,7 +387,7 @@ rm() {
         --show-trash-path|-p)
             echo "Home trash: $HOME_TRASH_DIR"
             echo "All trash directories:"
-            get_all_trash_dirs
+            _rm_safely_get_all_trash_dirs
             ;;
         --version)
             echo "rm-safely version: $VERSION"
@@ -412,6 +428,12 @@ HELP
 
                 [[ "$arg" == -* ]] && continue
 
+                if _rm_safely_is_root "$arg"; then
+                    echo "rm: it is dangerous to operate on '/'; this operation is always refused"
+                    failed=1
+                    continue
+                fi
+
                 if [ ! -e "$arg" ] && [ ! -L "$arg" ]; then
                     echo "rm: cannot remove '$arg': No such file or directory"
                     failed=1
@@ -424,7 +446,7 @@ HELP
                     absolute_path="$(pwd)/$arg"
                 fi
 
-                local TRASH_DIR=$(get_trash_dir "$absolute_path")
+                local TRASH_DIR=$(_rm_safely_get_trash_dir "$absolute_path")
                 local TRASH_FILES="${TRASH_DIR}/files"
                 local TRASH_INFO="${TRASH_DIR}/info"
 
@@ -447,7 +469,7 @@ HELP
 
                 if mv "$arg" "$TRASH_FILES/$trash_name" 2>/dev/null; then
                     echo "$absolute_path" > "$TRASH_INFO/${trash_name}.info"
-                    add_to_undo_stack "$trash_name" "$TRASH_DIR"
+                    _rm_safely_add_to_undo_stack "$trash_name" "$TRASH_DIR"
                     [ -d "$TRASH_FILES/$trash_name" ] && echo "Moved directory '$arg' to trash" || echo "Moved '$arg' to trash"
                 else
                     echo "ERROR: Failed to move '$arg' to trash"

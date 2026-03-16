@@ -1,0 +1,39 @@
+services:
+  ubuntu:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.ubuntu
+    command: >
+      bash -c "
+        echo '=== Ubuntu $(cat /etc/os-release | grep VERSION_ID | cut -d= -f2) ===' &&
+        echo '--- E2E Tests ---' &&
+        bash tests/test_e2e.sh &&
+        echo '--- Preserve Root Tests ---' &&
+        bash tests/test_preserve_root.sh
+      "
+
+  alpine:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.alpine
+    command: >
+      bash -c "
+        echo '=== Alpine $(cat /etc/os-release | grep VERSION_ID | cut -d= -f2) ===' &&
+        echo '--- E2E Tests ---' &&
+        bash tests/test_e2e.sh &&
+        echo '--- Preserve Root Tests ---' &&
+        bash tests/test_preserve_root.sh
+      "
+
+  freebsd:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.freebsd
+    command: >
+      sh -c "
+        echo '=== FreeBSD ===' &&
+        echo '--- E2E Tests ---' &&
+        sh tests/test_e2e.sh &&
+        echo '--- Preserve Root Tests ---' &&
+        sh tests/test_preserve_root.sh
+      "

@@ -1,0 +1,9 @@
+FROM dougrabson/freebsd14.2-small:latest
+
+WORKDIR /app
+COPY rm-safely ./
+COPY tests/ ./tests/
+
+RUN sh rm-safely install
+
+CMD ["sh", "tests/test_e2e.sh"]
