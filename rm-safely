@@ -140,6 +140,12 @@ _rm_safely_is_root() {
 }
 
 rm() {
+    # Re-source helpers in case they were lost e.g. in a subshell
+    if ! type _rm_safely_get_trash_dir >/dev/null 2>&1; then
+        local _hook="${HOOK_FILE:-$HOME/.rm-safely}"
+        [ -f "$_hook" ] && source "$_hook" && rm "$@" && return $? || return $?
+    fi
+
     setopt local_options null_glob dot_glob 2>/dev/null || true
     local HOME_TRASH_DIR="${HOME}/.local/share/Trash"
     mkdir -p "${HOME_TRASH_DIR}/files" "${HOME_TRASH_DIR}/info" 2>/dev/null
